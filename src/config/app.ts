@@ -5,6 +5,7 @@ import { corsConfig } from './cors/cors.ts'
 import { setHeaders } from './headers/setHeaders.ts'
 import { connectToDb } from './database/connectDB.ts'
 import { handleNotFound } from './routeNotFound/handleNotFound.ts'
+import { errorGlobalHandler } from './errors/errorGlobalhandler.ts'
 
 dotenv.config()
 
@@ -18,6 +19,9 @@ app.use(express.urlencoded({ limit: '1mb', extended: true }))
 
 app.use(setHeaders)
 app.use(corsConfig())
+
+// Middleware global para manejo de errores
+app.use(errorGlobalHandler)
 
 app.disable('x-powered-by')
 
