@@ -1,3 +1,3 @@
 export interface TokenPayload {
-  id: string;
+  uuid: string;
 }
