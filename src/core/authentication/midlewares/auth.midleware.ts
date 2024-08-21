@@ -2,8 +2,8 @@ import { getModel } from "@/config/database";
 import { Collection } from "@/constants";
 import { setError } from "@/helpers";
 import { RequestHandler } from "express";
-import UserMongoSchema from "../models/User.model";
 import { verifyToken } from "../helpers";
+import UserMongoSchema from "../models/User.model";
 
 export const authorize: RequestHandler = async (req, _res, next) => {
   try {
@@ -15,11 +15,12 @@ export const authorize: RequestHandler = async (req, _res, next) => {
     const tokenNotBearer = token.replace("Bearer", "");
 
     const validateToken = verifyToken(tokenNotBearer);
-    if (!validateToken || !validateToken.uuid) return next(setError(401, "Not authorized"));
+    if (!validateToken || !validateToken.uuid)
+      return next(setError(401, "Not authorized"));
 
     const user = await model.findById(validateToken.uuid);
-    if (!user) return next(setError(404, 'User not found'));
-    
+    if (!user) return next(setError(404, "User not found"));
+
     (req as any).user = user;
 
     next();
