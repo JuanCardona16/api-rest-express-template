@@ -4,7 +4,6 @@ import { AuthServices } from "../services/auth.service.ts";
 const authServices = new AuthServices();
 
 export class AuthController {
-  
   register: RequestHandler = async (req, res, next) => {
     try {
       const response = authServices.register(req, res, next);
