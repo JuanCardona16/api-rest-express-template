@@ -4,6 +4,6 @@ export const ROUTES = {
     LOGIN: '/login'
   },
   PRIVATE: {
-    USERS: '/users'
+    USER: '/:userId'
   }
 }

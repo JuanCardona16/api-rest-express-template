@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import crypto from "node:crypto";
-import { validatePassword, passwordHash } from "../helpers";
+import { validatePassword, passwordHash } from "../../authentication/helpers";
 import { setError } from "@/helpers";
 
 const UserMongoSchema = new mongoose.Schema(
