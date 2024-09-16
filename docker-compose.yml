@@ -1,0 +1,17 @@
+# Por defecto esta configurado para modo de desarrollo, 
+# si quieres pasarlo a modo produccion cambia las partes que estan comentadas.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development # Pasar el entorno como producción (default: development) | (production: production)
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development # Asegurar que el contenedor se ejecute en producción (default: development) | (production: production)
+    ports:
+      - "3000:3000"
+    command: pnpm dev # Asegurar que el comando de inicio sea el adecuado para producción (default: development) | (production: pnpm start)
