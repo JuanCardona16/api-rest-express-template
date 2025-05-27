@@ -15,10 +15,8 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
     "useUnknownInCatchVariables": true
   },
-  "include": ["./src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
