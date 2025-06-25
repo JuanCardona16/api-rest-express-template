@@ -1,6 +1,6 @@
 {
   "name": "authentication-system-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "src/core/index.ts",
   "scripts": {
     "dev": "tsx watch src/core/index.ts",
@@ -8,7 +8,9 @@
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "swagger:ui": "swagger-ui-express -p 3001 -f swagger.json",
+    "swagger:json": "ts-node ./src/config/swagger.config.ts > swagger.json"
   },
   "keywords": [],
   "author": "Juan David Cardona Bageth",
@@ -53,6 +55,7 @@
     "mongoose": "8.9.5",
     "resend": "^4.1.2",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.25.67"
   }
 }

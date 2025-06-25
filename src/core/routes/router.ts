@@ -1,6 +1,6 @@
 import { ApiPrefixAuthRoutes, ApiPrefixRouteUser } from '@/constants/routes';
 import { Router } from 'express';
-import authenticationPaths from '@/features/auth/routes/auth.route';
+import authenticationPaths from '@/features/authentication/routes/auth.route';
 import userRouterPaths from '@/features/user/routes/user.router';
 
 const routerApplication: Router = Router();

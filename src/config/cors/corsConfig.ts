@@ -1,7 +1,7 @@
 import cors from 'cors';
 
 // Lista de origenes permitodos
-const originWhileList: string[] = ['http://localhost:5173'];
+const originWhileList: string[] = ['http://localhost:5173', 'Insomnia', 'http://localhost:3001'];
 
 export const CorsConfig = () => {
   return cors({

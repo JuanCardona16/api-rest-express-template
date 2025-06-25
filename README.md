@@ -1,178 +1,214 @@
-# Plantilla de API Rest construido con Node.js & Express
+# Documentación del Proyecto
 
-En este documento encontraras toda la documentacion correspondiente sobre esta plantilla, tanto su arquitectura, tecnologias y configuracion adicional para que puedas sacarle el maximo provecho.
+Este documento tiene como objetivo proporcionar una visión general de la arquitectura, los patrones de diseño, la estructura del proyecto y la documentación de los endpoints de la API.
 
-## Descripción
+## 1. Arquitectura del Proyecto
 
-Este repositorio sirve como una plantilla **robusta, escalable y optimizada** para construir APIs backend utilizando Node.js y TypeScript, con **MongoDB** como base de datos principal a través de **Mongoose ODM**. Se enfoca en las mejores prácticas de desarrollo, incluyendo una arquitectura clara, tipado estático, manejo eficiente de base de datos, autenticación segura, validación de datos, testing y configuración centralizada.
+El proyecto sigue una arquitectura modular y en capas, diseñada para promover la separación de responsabilidades, la escalabilidad y la mantenibilidad. Se basa en el patrón **Clean Architecture** o **Arquitectura Hexagonal** (Ports and Adapters), donde el dominio del negocio es el centro y las capas externas (infraestructura, UI) se adaptan a él.
 
-El objetivo es proporcionar una base sólida y reutilizable que acelere el desarrollo de nuevas aplicaciones backend sobre MongoDB, garantizando calidad, mantenibilidad y rendimiento.
+## Capas Principales:
 
-## Tecnologias utilizadas
+- **`src/core`**: Contiene la lógica central de la aplicación, como la configuración de Express, el manejo global de errores, middlewares generales y la configuración de rutas principales.
+- **`src/features`**: Aquí se encuentran los módulos de negocio de la aplicación. Cada "feature" (característica) es un módulo independiente que encapsula su propia lógica de negocio, controladores, servicios, repositorios, interfaces y esquemas. Ejemplos: `authentication`, `user`.
+- **`src/infrastructure`**: Contiene las implementaciones de los "adaptadores" que interactúan con servicios externos, como bases de datos (MongoDB) y sistemas de caché (Redis).
+- **`src/lib`**: Incluye utilidades y librerías compartidas que no pertenecen directamente a una característica o a la infraestructura, como manejadores de errores personalizados, helpers para JWT y manejo de contraseñas.
+- **`src/config`**: Almacena la configuración de la aplicación, como CORS, variables de entorno, cabeceras de respuesta y configuración de Swagger.
+- **`src/constants`**: Define constantes globales utilizadas en toda la aplicación, como prefijos de API y rutas.
 
-Estas son las tecnologias utilizadas en este proyecto:
+### Sistema de capas por funcionalidad
 
-### Node.js API Template - Backend Escalable con MongoDB (TypeScript)
+#### Capa de Contratos (#1)
 
-![Node.js](https://img.shields.io/badge/Node.js-18.x+-green.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5.x+-blue.svg) ![Express.js](https://img.shields.io/badge/Express.js-4.x-orange.svg) ![Mongoose](https://img.shields.io/badge/Mongoose-8.x-red.svg) ![MongoDB](https://img.shields.io/badge/MongoDB-green.svg) ![JWT](https://img.shields.io/badge/Auth-JWT-red.svg) ![Jest](https://img.shields.io/badge/Tests-Jest-brightgreen.svg) ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+En esta capa encontraremos todos los contratos de entrada y salida de los servicios. Como tipos e interfaces utilizadas en esa funcionalidad. Esto nos ayudara a tener una mejor estructura y escalabilidad en nuestra aplicacion.
 
-## ✨ Características Principales
+#### Capa de Acceso a Datos (#2)
 
-- **🚀 Framework:** Express.js
-- **🔒 Tipado Estático:** TypeScript para mayor robustez y mejor experiencia de desarrollo.
-- **🔑 Autenticación:** Basada en JSON Web Tokens (JWT) almacenados en cookies `HttpOnly` y `Secure`.
-- **🛡️ Seguridad:** Hashing de contraseñas con `bcrypt`, validación de entrada con `Zod`, cabeceras de seguridad con `helmet`, prevención básica de ataques de fuerza bruta con `express-rate-limit`.
-- **💾 ODM:** Mongoose para modelado de datos, validación de esquemas y interacción simplificada con MongoDB.
-- **✅ Validación:** Validación de esquemas para cuerpos de solicitud, parámetros y consultas usando Zod (complementa las validaciones de Mongoose a nivel de API).
-- **🚦 Arquitectura Modular:** Estructura organizada por capas (rutas, controladores, servicios, modelos Mongoose) y potencialmente por _features_ para facilitar la escalabilidad.
-- **⚙️ Configuración Centralizada:** Manejo de variables de entorno con `dotenv` y validación opcional de las mismas.
-- **centralized:** Middleware centralizado para capturar y manejar errores de forma consistente.
-- **🧪 Testing:** Configuración lista para pruebas unitarias y de integración con Jest (o Vitest como alternativa).
-- **📜 Logging:** Logging estructurado y configurable (ej. con Winston o Pino) para desarrollo y producción.
-- **📄 Documentación API:** Generación automática de documentación API con Swagger/OpenAPI.
-- **💅 Linting y Formateo:** ESLint y Prettier preconfigurados para mantener la consistencia del código.
+La capa de Acceso a Datos es responsable de:
 
-## 🛠️ Stack Tecnológico
+- Gestionar todas las operaciones de base de datos
+- Transformar datos entre el formato de base de datos y objetos de dominio
+- No contiene lógica de negocio
 
-- **Lenguaje:** TypeScript 5.x+
-- **Entorno:** Node.js 18.x+
-- **Framework Web:** Express.js 4.x
-- **Base de Datos:** MongoDB
-- **ODM:** Mongoose 8.x
-- **Autenticación:** `jsonwebtoken`, `bcryptjs`
-- **Validación:** Zod, Mongoose Schemas
-- **Testing:** Jest (o Vitest)
-- **Logging:** Winston (o Pino)
-- **Seguridad:** `helmet`, `express-rate-limit`, `cors`
-- **Variables de Entorno:** `dotenv`
-- **Documentación API:** `swagger-ui-express`, `swagger-jsdoc`
-- **Linting/Formateo:** ESLint, Prettier
+Esta capa actúa como una abstracción entre la base de datos y el resto de la aplicación, asegurando una clara separación de responsabilidades.
 
-## Arquitectura propuesta
+#### Capa de Servicios (Logica de Negocio) (#3)
 
-En la actualidad existen diferentes arquitectura o patrones de diseño que nos ayudan a estructurar nuestro proyecto de tal manera que se nos sea mas facil mantenerlo, escalarlo y llevar un control de lo que construimos. Aqui te presento una arquitectura que extrae lo mejor de los monolitos modulares y los microservicios, enfocada en la escalabilidad y la migracion facil a microservicios.
+La capa de Servicios es responsable de:
 
-Esta arquitectura nos ayudara a tener un mayor control y escalabilidad dependiendo de los requerimientos y las funcionalidades que resente tu proyecto. A continuacion te presento la maquetacion de la arquitectura.
+- Implementar reglas de negocio
+- Validaciones complejas
+- Coordinacion entre multiples repositorios
+- No contiene lógica de acceso a datos
+- Transformaciones de datos para la logica de negocio
 
-## 📂 Estructura del Proyecto (Propuesta con Mongoose)
+Esta capa es responsable de implementar toda la lógica de negocio compleja. Se encarga de orquestar las operaciones entre las diferentes capas, aplicar las reglas de negocio específicas del dominio, realizar transformaciones de datos necesarias, y coordinar el flujo de información utilizando los servicios proporcionados por otras capas. Actúa como un intermediario inteligente que garantiza que todas las operaciones cumplan con los requisitos y reglas establecidas por el negocio.
 
-```text
-.
+#### Capa de Controladores (Manejo de HTTP) (#4)
+
+La capa de Controladores es responsable de:
+
+- Manejar requests y responses HTTP
+- Validar los datos de entrada básicos
+- Transformar datos entre HTTP y objetos de dominio
+- Manejar códigos de estado HTTP
+- No contiene lógica de negocio
+
+Esta capa es responsable de recibir las peticiones HTTP, validar los datos de entrada, invocar los servicios correspondientes, transformar los datos de salida y devolver las respuestas HTTP. Es el punto de entrada y salida de la aplicación para las peticiones HTTP.
+
+#### Capa de Rutas
+
+La capa de Rutas es responsable de:
+
+- Definir endpoints HTTP
+- Asociar endpoints con métodos del controlador
+- Aplicar middlewares específicos de ruta (si es necesario)
+
+Esta capa es responsable de definir las rutas de la API y asignar las peticiones HTTP a los controladores correspondientes. Es el punto de entrada para las peticiones HTTP y se encarga de enrutar las peticiones a los controladores adecuados.
+
+## 2. Patrones de Diseño Implementados
+
+- **Separación de Responsabilidades (SRP)**: Cada módulo y capa tiene una única responsabilidad bien definida.
+- **Inversión de Dependencias (DIP)**: Las capas de alto nivel (lógica de negocio) no dependen de las capas de bajo nivel (infraestructura). En su lugar, ambas dependen de abstracciones (interfaces). Esto se observa en el uso de interfaces de repositorio en la capa de `features` y su implementación en la capa de `infrastructure`.
+- **Middleware Pattern**: Utilizado extensivamente en Express para manejar solicitudes HTTP, validación, autenticación y manejo de errores.
+- **Singleton Pattern**: Posiblemente utilizado para la conexión a la base de datos o para instancias de servicios que solo necesitan una única instancia global.
+- **Repository Pattern**: Abstrae la lógica de acceso a datos, permitiendo que la capa de negocio interactúe con los datos sin conocer los detalles de la base de datos subyacente.
+
+## 3. Estructura del Proyecto
+
+```
+api-rest-express-template/
+├── .env.example
+├── esbuild.config.ts
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
 ├── src/
-│   ├── config/            # Archivos de configuración (db, env, logger, etc.)
-│   │   └── database.ts    # Conexión a MongoDB con Mongoose
-│   ├── core/              # Lógica central (servidor, errores, middlewares globales)
-│   │   ├── errors/        # Clases de error personalizadas
-│   │   ├── middleware/    # Middlewares globales (auth, error, validate, logging)
-│   │   └── Server.ts      # Clase o función para configurar y lanzar el servidor Express
-│   ├── features/          # Módulos/Funcionalidades de la aplicación
-│   │   └── auth/          # Ejemplo: Módulo de autenticación
-│   │       ├── auth.controller.ts
-│   │       ├── auth.routes.ts
-│   │       ├── auth.service.ts
-│   │       ├── auth.schema.ts   # Esquemas Zod para validación de API
-│   │       ├── user.model.ts    # Modelo y Esquema Mongoose para Usuarios
-│   │       └── auth.types.ts    # Tipos específicos del módulo (si es necesario)
-│   │   └── ...            # Otros módulos/features
-│   ├── lib/               # Librerías/utilidades compartidas (ej: JWT helpers, password hasher)
-│   ├── types/             # Tipos globales o compartidos (ej: tipos de Express Request)
-│   └── index.ts           # Punto de entrada principal de la aplicación
-├── tests/                 # Archivos de pruebas (unitarias, integración)
-│   ├── integration/
-│   └── unit/
-├── .env.example           # Archivo de ejemplo para variables de entorno
-├── .eslintrc.js           # Configuración de ESLint
-├── .gitignore             # Archivos ignorados por Git
-├── .prettierrc.js         # Configuración de Prettier
-├── nodemon.json           # Configuración de Nodemon (para desarrollo)
-├── package.json           # Dependencias y scripts del proyecto
-├── README.md              # Documentación del proyecto (este archivo)
-└── tsconfig.json          # Configuración del compilador TypeScript
+│   ├── config/             # Configuración de la aplicación (CORS, Env, Headers, Swagger)
+│   ├── constants/          # Constantes globales (rutas, etc.)
+│   ├── core/               # Lógica central de la aplicación (Express, errores, middleware, rutas principales)
+│   │   ├── app.ts          # Configuración principal de Express
+│   │   ├── index.ts        # Archivo de inicio de la aplicación
+│   │   ├── errors/         # Manejo global de errores
+│   │   ├── middleware/     # Middlewares generales (autenticación, rate limit, validación)
+│   │   └── routes/         # Rutas principales y manejo de rutas no encontradas
+│   ├── features/           # Módulos de negocio (Authentication, User)
+│   │   ├── authentication/ # Módulo de autenticación
+│   │   │   ├── modules/    # Lógica específica de autenticación (basic, jwt)
+│   │   │   └── routes/     # Rutas de autenticación
+│   │   └── user/           # Módulo de usuario
+│   │       ├── controller/ # Controladores de usuario
+│   │       ├── interfaces/ # Interfaces de usuario
+│   │       ├── model/      # Modelos de usuario (Mongoose)
+│   │       ├── repository/ # Implementaciones de repositorios de usuario
+│   │       ├── routes/     # Rutas de usuario
+│   │       ├── schemas/    # Esquemas de validación (Zod)
+│   │       └── services/   # Lógica de negocio de usuario
+│   ├── infrastructure/     # Implementaciones de adaptadores (MongoDB, Redis)
+│   │   ├── mongoDb/        # Conexión y modelos de MongoDB
+│   │   └── redis/          # Configuración de Redis
+│   └── lib/                # Utilidades y librerías compartidas (Custom Errors, JWT, Passwords)
+│       ├── HandlerCustomErrors/ # Manejo de errores personalizados
+│       ├── Jwt/            # Helpers para JWT
+│       └── Passwords/      # Helpers para manejo de contraseñas
+└── tsconfig.json
 ```
 
-### 📘 Documentación de Swagger/OpenAPI
+## 4. Documentación de Endpoints (Swagger)
 
-Hemos integrado Swagger UI para documentar automáticamente tu API.
+La API está documentada utilizando Swagger/OpenAPI. Puedes acceder a la documentación interactiva de los endpoints en la siguiente ruta (una vez que la aplicación esté corriendo):
 
-### 📄 URL de la Documentación
+`http://localhost:[PUERTO]/api/v1/docs`
 
-Accede a la documentación interactiva aquí:
+(Reemplaza `[PUERTO]` con el puerto en el que se ejecuta tu aplicación, generalmente definido en las variables de entorno).
 
-[http://localhost:3000/api-docs](http://localhost:3000/api-docs) ⚠️ Ajusta el puerto según tu configuración.
+La configuración de Swagger se encuentra en <mcfile name="config.ts" path="src/config/swagger/config.ts"></mcfile> y se inicializa en <mcfile name="app.ts" path="src/core/app.ts"></mcfile>.
 
-### 🛠️ Cómo Utilizar la API
+## 5. Tecnologías Utilizadas
 
-#### 1. Configuración Inicial
+Este proyecto ha sido construido utilizando las siguientes tecnologías y herramientas clave:
 
-##### Variables de entorno
+-   **Lenguaje:** TypeScript 5.x+
+-   **Entorno de Ejecución:** Node.js 18.x+
+-   **Framework Web:** Express.js 4.x
+-   **Base de Datos:** MongoDB
+-   **ODM (Object Data Modeling):** Mongoose 8.x
+-   **Autenticación:** JSON Web Tokens (JWT) con `jsonwebtoken` y `bcryptjs` para hashing de contraseñas.
+-   **Validación de Datos:** Zod para validación de esquemas de entrada y Mongoose Schemas para validación a nivel de base de datos.
+-   **Seguridad:** `helmet` para cabeceras de seguridad, `express-rate-limit` para prevención de ataques de fuerza bruta, y `cors` para manejo de políticas de origen cruzado.
+-   **Variables de Entorno:** `dotenv` para la gestión de configuraciones sensibles.
+-   **Documentación API:** Swagger/OpenAPI con `swagger-ui-express` y `swagger-jsdoc`.
+-   **Linting y Formateo:** ESLint y Prettier para mantener la consistencia y calidad del código.
+-   **Gestor de Paquetes:** pnpm (aunque también es compatible con npm).
 
-Copia el archivo `.env.example` a `.env` y configura los valores necesarios:
+## 6. Características Principales
 
-```env
-PORT=tu-port
-MONGODB_URI=tu-url-db
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=1d
-```
+-   **🚀 Framework Robusto:** Construido sobre Express.js, un framework web rápido y minimalista para Node.js.
+-   **🔒 Tipado Estático Avanzado:** Utiliza TypeScript para proporcionar un tipado estático completo, lo que mejora la detección de errores en tiempo de desarrollo, la refactorización y la mantenibilidad del código.
+-   **🔑 Autenticación Segura:** Implementa un sistema de autenticación basado en JSON Web Tokens (JWT), con tokens almacenados de forma segura en cookies `HttpOnly` y `Secure` para proteger contra ataques XSS.
+-   **🛡️ Seguridad Integral:** Incluye medidas de seguridad como el hashing de contraseñas con `bcrypt`, validación de entrada robusta con `Zod`, configuración de cabeceras HTTP seguras con `helmet`, y prevención básica de ataques de fuerza bruta mediante `express-rate-limit`.
+-   **💾 Gestión de Datos Eficiente:** Integración con MongoDB a través de Mongoose, un potente ODM que facilita el modelado de datos, la validación de esquemas y la interacción simplificada con la base de datos.
+-   **✅ Validación de Datos Exhaustiva:** Valida los esquemas de los cuerpos de solicitud, parámetros y consultas utilizando Zod, complementando las validaciones a nivel de base de datos de Mongoose.
+-   **🚦 Arquitectura Modular y Escalable:** Estructura organizada por capas (rutas, controladores, servicios, modelos Mongoose) y por características (`features`), lo que facilita la escalabilidad, la separación de responsabilidades y la mantenibilidad del código.
+-   **⚙️ Configuración Centralizada:** Manejo de variables de entorno con `dotenv` para una configuración flexible y segura de la aplicación.
+-   **🚨 Manejo Global de Errores:** Un middleware centralizado para capturar y manejar errores de forma consistente en toda la aplicación, proporcionando respuestas estandarizadas.
+-   **🧪 Testing Integrado:** Configuración lista para pruebas unitarias y de integración utilizando Jest, asegurando la calidad y el correcto funcionamiento de la lógica de negocio.
+-   **📄 Documentación API Automática:** Generación automática de documentación API interactiva con Swagger/OpenAPI, facilitando el consumo y la comprensión de los endpoints.
+-   **💅 Calidad de Código:** ESLint y Prettier preconfigurados para asegurar la consistencia del estilo de código y adherencia a las mejores prácticas.
 
-#### Instalación de dependencias
+## 7. Configuración Inicial
 
-Usa uno de los siguientes comandos:
+Para poner en marcha este proyecto en tu entorno local, sigue los siguientes pasos:
+
+### 1. Clonar el Repositorio
 
 ```bash
-npm install
-# o
+git clone https://github.com/tu-usuario/api-rest-express-template.git
+cd api-rest-express-template
+```
+
+### 2. Instalar Dependencias
+```bash
 pnpm install
+# o
+npm install
 ```
 
-#### Ejecución en desarrollo
+### 3. Configurar Variables de Entorno
+Crea un archivo `.env` en la raíz del proyecto y configura las variables de entorno necesarias. Puedes utilizar el archivo `.env.example` como referencia.
 
 ```bash
-npm run dev
-# o
-pnpm dev
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/your_database_name
+JWT_SECRET=your_super_secret_jwt_key
+JWT_EXPIRES_IN=1d
+NODE_ENV=development
 ```
 
-### 🚀 Endpoints Disponibles
+### 4. Ejecutar la Aplicación
 
-#### 🔐 Autenticación
+Modo Desarrollo
 
-| Método | Endpoint               | Descripción               |
-|--------|-------------------------|---------------------------|
-| POST   | `/api/v1/auth/register` | Registrar nuevo usuario   |
-| POST   | `/api/v1/auth/login`    | Iniciar sesión            |
-<!-- | POST   | `/api/v1/auth/logout`   | Cerrar sesión             | -->
-<!-- | GET    | `/api/v1/auth/me`       | Obtener información del usuario actual | -->
+Para ejecutar la aplicación en modo desarrollo (con recarga en caliente):
 
-#### 👤 Usuarios (Ejemplo)
+```bash
+pnpm dev
+# o
+npm run dev
+```
 
-| Método | Endpoint               | Descripción               |
-|--------|-------------------------|---------------------------|
-| GET    | `/api/v1/user/profile`  | Obtener informacion del usuario actual |
-<!-- | GET    | `/api/v1/users/:id`     | Obtener un usuario específico |
-| PUT    | `/api/v1/users/:id`     | Actualizar un usuario      |
-| DELETE | `/api/v1/users/:id`     | Eliminar un usuario        | -->
+Modo Producción
 
-⚠️ Ajusta el puerto según tu configuración.
+Para construir y ejecutar la aplicación en modo producción:
 
-### 🌟 Contribuciones
+```bash
+pnpm build
+pnpm start
+# o
+npm run build
+npm start
+```
 
-¡Las contribuciones son bienvenidas! Si deseas mejorar esta plantilla, sigue estos pasos:
+## 8. Licencia
+Este proyecto está bajo la licencia MIT. Consulta el archivo LICENSE en la raíz del repositorio para más detalles.
 
-1. Haz un fork del repositorio.
-2. Crea una rama para tu funcionalidad o corrección (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y haz commit (`git commit -m 'Agrega nueva funcionalidad'`).
-4. Sube tus cambios a tu fork (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request en este repositorio.
-
-### 🧩 Recursos Adicionales
-
-- [Documentación oficial de Node.js](https://nodejs.org/es/docs/)
-- [Documentación oficial de TypeScript](https://www.typescriptlang.org/docs/)
-- [Documentación oficial de Express.js](https://expressjs.com/es/)
-- [Documentación oficial de Mongoose](https://mongoosejs.com/docs/)
-- [Documentación oficial de Swagger](https://swagger.io/docs/)
-
-### 📝 Licencia
-
-Este proyecto está bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+© 2025 Juan David Cardona - API Rest Express Template. Todos los derechos reservados.

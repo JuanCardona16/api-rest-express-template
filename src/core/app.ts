@@ -1,16 +1,16 @@
-import 'tsconfig-paths/register';
-import { DATABASE_URL } from '@/config/env/env';
+import { DATABASE_URL } from '@/config/env/enviroments';
+import { setupSwagger } from '@/config/swagger/config';
 import { ApiPrefix } from '@/constants';
 import dotenv from 'dotenv';
 import express from 'express';
+import helmer from 'helmet';
+import 'tsconfig-paths/register';
 import { CorsConfig, setHeaders } from '../config';
-import MongoHelpers from '../lib/Mongo/MongoHelpers';
+import MongoHelpers from '../infrastructure/mongoDb/lib/MongoHelpers';
 import { GlobalHandleError } from './errors';
+import limiter from './middleware/rateLimit/limiter';
 import { handleNotFound } from './routes';
 import routerApplication from './routes/router';
-import limiter from './middleware/rateLimit/limiter';
-import helmer from 'helmet';
-import { setupSwagger } from '@/config/swagger/config';
 
 dotenv.config();
 const app = express();

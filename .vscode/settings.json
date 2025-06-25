@@ -1,0 +1,5 @@
+{
+  "extensions.closeExtensionDetailsOnViewChange": false,
+  "extensions.webWorker": "auto",
+  "window.zoomLevel": -1
+}

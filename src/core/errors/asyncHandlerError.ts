@@ -6,10 +6,21 @@ import { Response, Request, NextFunction } from 'express';
 export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next))
     .then((result) => {
-      // Aquí puedes mandar un JSON de éxito, opcionalmente pasas un resultado
-      res.status(result).json({
+      // Si ya enviaste la respuesta en el controlador, no hacer nada
+      if (res.headersSent) {
+        return;
+      }
+
+      // Si el resultado es tu ApiResponses personalizado
+      if (result && typeof result === 'object' && 'success' in result) {
+        return res.status(200).json(result);
+      }
+
+      // Para resultados simples
+      res.status(200).json({
         success: true,
-        data: result, // el resultado que devuelve tu función
+        data: result,
+        timestamp: new Date().toISOString(),
       });
     })
     .catch(next); // Si hay un error, lo pasa al siguiente middleware de error

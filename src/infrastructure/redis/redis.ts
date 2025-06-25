@@ -1,3 +1,5 @@
+// Ejemplo de otra infraestructura
+
 // import { REDIS_HOST, REDIS_PORT, REDIS_PASS } from '@/constants';
 // import Redis from 'ioredis';
 

@@ -23,11 +23,9 @@ export class JwtHelpers {
   }
 
   verifyToken<T>(payload: string): Payload<T> | null {
-    console.log('Payload: ', payload);
     try {
       return jwt.verify(payload!, this.SECRET_KEY) as Payload<T>;
     } catch (error) {
-      console.log('Invalid token jwt', error); // Solo para desarrollo
       return null;
     }
   }
@@ -36,7 +34,6 @@ export class JwtHelpers {
     try {
       return jwt.verify(token, this.SECRET_REFRESH_KEY) as T;
     } catch (error) {
-      console.error('Invalid refresh token:', error); // Solo para desarrollo
       return null;
     }
   }

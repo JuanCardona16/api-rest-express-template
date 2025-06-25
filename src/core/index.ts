@@ -1,5 +1,5 @@
-import app from '../core/app.ts';
-import { PORT } from '@/config/env/env';
+import app from '../core/app';
+import { PORT } from '@/config/env/enviroments';
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT} -> http://localhost:${PORT}`);
