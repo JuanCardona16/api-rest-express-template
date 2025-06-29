@@ -4,8 +4,8 @@ import { IUserRepository } from '../interfaces/IUserRepository';
 import { User } from '../model/User.model';
 
 class UserServices {
-  constructor(private readonly userRepository: IUserRepository) { }
-  
+  constructor(private readonly userRepository: IUserRepository) {}
+
   async getUserByUuid(uuid: string): Promise<ApiResponses> {
     if (!uuid) throw CustomError(400, 'Bad request');
 
@@ -33,7 +33,7 @@ class UserServices {
 
     if (!updatedUser) throw CustomError(404, 'User not found');
 
-    return CustomResponses.success(updatedUser);  
+    return CustomResponses.success(updatedUser);
   }
 
   async deleteUser(uuid: string): Promise<ApiResponses> {
@@ -53,7 +53,6 @@ class UserServices {
 
     return CustomResponses.success(users);
   }
-
 }
 
 export default UserServices;

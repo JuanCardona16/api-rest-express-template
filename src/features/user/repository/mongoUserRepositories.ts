@@ -40,6 +40,7 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const updatedUser = await this.userModel
         .findOneAndUpdate({ uuid }, user, { new: true })
+        .select('-password -_id')
         .lean()
         .exec();
       return updatedUser;
@@ -50,7 +51,11 @@ export class MongoUserRepository implements IUserRepository {
 
   async deleteUser(uuid: string): Promise<User | null> {
     try {
-      const deletedUser = await this.userModel.findOneAndDelete({ uuid }).lean().exec();
+      const deletedUser = await this.userModel
+        .findOneAndDelete({ uuid })
+        .select('-password -_id')
+        .lean()
+        .exec();
       return deletedUser;
     } catch (error) {
       throw CustomError(500, 'Internal server error');

@@ -45,6 +45,9 @@ class UserControllers {
     const { uuid } = req.params;
     const { user } = req.body;
 
+    console.log("uuid: ", uuid);
+    console.log("user: ", user);
+
     if (!uuid || !user) {
       return next(CustomError(400, 'Bad request'));
     }
