@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Socket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Cliente WebSocket</h1>
+    <div>
+      <form id="form">
+        <input id="input" autocomplete="off" />
+        <button>Send</button>
+      </form>
+    </div>
+    <script>
+      const socket = io('http://localhost:3001', {
+        auth: {
+          token:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoiYTk5ZThhZmEtMmI4MS00MDgxLWJmZmYtZDk1ZWUzZWRmNmEwIiwiaWF0IjoxNzUxMzA1ODU1LCJleHAiOjE3NTE0Nzg2NTV9.gz5kmy8IPPtSDn5BJ1Xw942jBZL8Nb_Dk3x09IQ4FOA',
+        },
+      });
+
+      const form = document.getElementById('form');
+      const input = document.getElementById('input');
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value) {
+          socket.emit('chat message', input.value);
+          input.value = '';
+        }
+      });
+
+      socket.on('connect', () => {
+        console.log('✅ Conectado como socket:', socket.id);
+
+        socket.on('authenticated', (message) => {
+          console.log('📥 Mensaje recibido:', message);
+        });
+
+        socket.on('message', (message) => {
+          console.log('📥 Mensaje recibido:', message);
+        });
+      });
+    </script>
+  </body>
+</html>
