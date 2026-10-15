@@ -1,53 +1,39 @@
-import { it } from 'vitest';
-
 import { TEST_ENV } from '../shared/env';
 
-/**
- * Las pruebas de extremo a extremo corren contra el sistema ya desplegado,
- * no contra el codigo de este checkout.
- *
- * Si el stack no esta arriba no se simula un exito: se salta la suite y se
- * dice por que. Un E2E verde sin haber probado nada es peor que uno ausente.
- */
 export const E2E_BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 
-export const isStackRunning = async (): Promise<boolean> => {
+/**
+ * ¿Hay un stack escuchando?
+ *
+ * El resultado se guarda en el módulo para que los archivos de prueba puedan
+ * declarar `describe.skipIf(...)`. Una comprobación dentro de cada test que
+ * solo hace `return` cuando el stack no está arriba produce una suite EN VERDE
+ * que no probó nada: es peor que no tener pruebas, porque parece cobertura.
+ */
+export let isStackAvailable = false;
+
+export const detectStack = async (): Promise<boolean> => {
   try {
-    const response = await fetch(`${E2E_BASE_URL}/api/v1/not-a-real-route`, {
+    const response = await fetch(`${E2E_BASE_URL}/api/v1/health`, {
       signal: AbortSignal.timeout(2_000),
     });
-    // Cualquier respuesta HTTP prueba que hay algo escuchando en ese puerto.
-    return response.status > 0;
+
+    return response.status === 200;
   } catch {
     return false;
   }
 };
 
-export const skipUnlessStackIsRunning = async (): Promise<boolean> => {
-  const running = await isStackRunning();
+export const initStackCheck = async (): Promise<void> => {
+  isStackAvailable = await detectStack();
 
-  if (!running) {
+  if (!isStackAvailable) {
     console.warn(
-      `\n[e2e] Omitido: no hay stack escuchando en ${E2E_BASE_URL}.\n` +
-        `      Levantalo con \`pnpm docker:prod\` antes de correr las pruebas de extremo a extremo.\n`,
+      `\n[e2e] OMITIDA: no hay stack escuchando en ${E2E_BASE_URL}.\n` +
+        `      Levantalo con \`pnpm docker:up\` antes de correr estas pruebas.\n` +
+        `      Los tests se marcan como omitidos, NO comoapproved.\n`,
     );
   }
-
-  return running;
 };
 
 export { TEST_ENV };
-
-/**
- * Declara una prueba de extremo a extremo que solo corre si el stack esta arriba.
- *
- * Si el stack no responde, la prueba se omite con un aviso. Un E2E verde sin
- * haber probado nada es peor que uno ausente: parece cobertura y no lo es.
- */
-export const itConStack = (nombre: string, prueba: () => Promise<void>) => {
-  it(nombre, async () => {
-    if (!(await skipUnlessStackIsRunning())) return;
-
-    await prueba();
-  });
-};
