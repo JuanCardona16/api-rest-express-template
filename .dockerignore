@@ -1,0 +1,41 @@
+# Contexto de build: lo que no entra en la imagen.
+# El daemon de Docker manda TODO lo que no este aca, incluido .env y node_modules.
+
+# Secretos: nunca deben quedar en una capa, ni siquiera eliminados despues.
+.env
+.env.*
+!.env.example
+
+# Dependencias: la imagen las reinstala con el lockfile.
+node_modules
+**/node_modules
+
+# Artefactos de desarrollo
+dist
+build
+coverage
+.eslintcache
+
+# Herramientas de agente y documentos internos
+.atl
+odd
+*.md
+!README.md
+
+# Tests: la imagen de produccion no los ejecuta
+test
+**/*.test.ts
+vitest.config.ts
+tsconfig.test.json
+
+# Configuracion de desarrollo
+.vscode
+.github
+client
+swagger.json
+
+# Sistema
+.git
+.gitignore
+Dockerfile
+.dockerignore

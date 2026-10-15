@@ -20,7 +20,13 @@
     "test:watch": "vitest",
     "test:all": "pnpm test:unit && pnpm test:integration && pnpm test:functional && pnpm test:e2e",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "build:watch": "tsup --watch"
+    "build:watch": "tsup --watch",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f api",
+    "docker:clean": "docker compose down -v",
+    "docker:test": "pnpm docker:up && pnpm test:e2e"
   },
   "keywords": [],
   "author": "Juan David Cardona Bageth",
