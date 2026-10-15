@@ -33,13 +33,13 @@ Esto no es una preferencia de estilo: el doble de prueba `test/shared/userReposi
 
 ## Convenciones
 
-| Qué | Cómo |
-| --- | --- |
-| Imports | Siempre el alias `@/`. Nada de rutas relativas de varios niveles. |
-| Argumentos sin usar | Prefijo `_` |
-| `any` explícito | Evitarlo. Si es inevitable, queda como warning de lint. |
-| Formato | `pnpm lint:fix`. `.prettierrc` es la única fuente. |
-| Tipos | `pnpm typecheck` debe salir limpio. |
+| Qué                 | Cómo                                                              |
+| ------------------- | ----------------------------------------------------------------- |
+| Imports             | Siempre el alias `@/`. Nada de rutas relativas de varios niveles. |
+| Argumentos sin usar | Prefijo `_`                                                       |
+| `any` explícito     | Evitarlo. Si es inevitable, queda como warning de lint.           |
+| Formato             | `pnpm lint:fix`. `.prettierrc` es la única fuente.                |
+| Tipos               | `pnpm typecheck` debe salir limpio.                               |
 
 ## Verificación mínima antes de un PR
 

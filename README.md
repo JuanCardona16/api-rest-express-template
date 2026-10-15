@@ -14,11 +14,11 @@ Plantilla de API REST con Node.js, Express y TypeScript, organizada en capas té
 
 ## 1. Requisitos
 
-| Herramienta | Versión | Nota |
-| --- | --- | --- |
-| Node.js | `>=20 <26` | Declarado en `engines`. Ver la nota de abajo. |
-| pnpm | 12.x | **Único** gestor de dependencias soportado. |
-| Docker | 24+ | Opcional, solo para el stack completo. |
+| Herramienta | Versión    | Nota                                          |
+| ----------- | ---------- | --------------------------------------------- |
+| Node.js     | `>=20 <26` | Declarado en `engines`. Ver la nota de abajo. |
+| pnpm        | 12.x       | **Único** gestor de dependencias soportado.   |
+| Docker      | 24+        | Opcional, solo para el stack completo.        |
 
 ```bash
 corepack enable   # activa pnpm desde el packageManager del package.json
@@ -115,13 +115,13 @@ pnpm test:e2e           # contra el stack de Docker, por HTTP.
 pnpm test:all
 ```
 
-| Directorio | Qué prueba | Dependencias |
-| --- | --- | --- |
-| `test/unit/` | Reglas de negocio contra los puertos | Ninguna |
-| `test/integration/` | Cableado HTTP, middlewares, mongoose | `mongodb-memory-server` |
-| `test/functional/` | Flujos completos de cada caso de uso | `mongodb-memory-server` |
-| `test/e2e/` | El sistema desplegado, como un cliente más | Docker |
-| `test/shared/` | Dobles de prueba y configuración | — |
+| Directorio          | Qué prueba                                 | Dependencias            |
+| ------------------- | ------------------------------------------ | ----------------------- |
+| `test/unit/`        | Reglas de negocio contra los puertos       | Ninguna                 |
+| `test/integration/` | Cableado HTTP, middlewares, mongoose       | `mongodb-memory-server` |
+| `test/functional/`  | Flujos completos de cada caso de uso       | `mongodb-memory-server` |
+| `test/e2e/`         | El sistema desplegado, como un cliente más | Docker                  |
+| `test/shared/`      | Dobles de prueba y configuración           | —                       |
 
 `test/e2e` **se omite con un aviso** cuando no hay stack escuchando. No simula un éxito: un E2E verde sin haber probado nada es peor que uno ausente.
 
@@ -131,19 +131,19 @@ La regla de contraseña válida está definida en **un solo lugar**, `PasswordHe
 
 ## 7. Variables de entorno
 
-| Variable | Requerida | Descripción |
-| --- | --- | --- |
-| `PORT` | No | Puerto del servidor. Por defecto `3000`. |
-| `NODE_ENV` | No | `development`, `test` o `production`. |
-| `DATABASE_URL` | **Sí** | Cadena de conexión a MongoDB. |
-| `TOKEN_SECRET_KEY` | **Sí** | Secreto de los tokens de acceso. |
-| `REFESCH_TOKEN_SECRET_KEY` | **Sí** | Secreto de los tokens de refresco. |
-| `RESEND_KEY` | No | Servicio de email. |
-| `CLIENT_GOOGLE_ID` | No | OAuth de Google. |
-| `CLIENT_GOOGLE_SECRET` | No | OAuth de Google. |
-| `SOCKET_CORS_ORIGIN` | No | Orígenes permitidos en WebSocket, separados por coma. |
-| `RATE_LIMIT_MAX` | No | Máximo de solicitudes por ventana. Por defecto `10`. |
-| `RATE_LIMIT_WINDOW_MS` | No | Ventana del límite. Por defecto 15 minutos. |
+| Variable                   | Requerida | Descripción                                           |
+| -------------------------- | --------- | ----------------------------------------------------- |
+| `PORT`                     | No        | Puerto del servidor. Por defecto `3000`.              |
+| `NODE_ENV`                 | No        | `development`, `test` o `production`.                 |
+| `DATABASE_URL`             | **Sí**    | Cadena de conexión a MongoDB.                         |
+| `TOKEN_SECRET_KEY`         | **Sí**    | Secreto de los tokens de acceso.                      |
+| `REFESCH_TOKEN_SECRET_KEY` | **Sí**    | Secreto de los tokens de refresco.                    |
+| `RESEND_KEY`               | No        | Servicio de email.                                    |
+| `CLIENT_GOOGLE_ID`         | No        | OAuth de Google.                                      |
+| `CLIENT_GOOGLE_SECRET`     | No        | OAuth de Google.                                      |
+| `SOCKET_CORS_ORIGIN`       | No        | Orígenes permitidos en WebSocket, separados por coma. |
+| `RATE_LIMIT_MAX`           | No        | Máximo de solicitudes por ventana. Por defecto `10`.  |
+| `RATE_LIMIT_WINDOW_MS`     | No        | Ventana del límite. Por defecto 15 minutos.           |
 
 En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites no se corten con `429`.
 
@@ -152,8 +152,12 @@ En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites n
 `GET /api/v1/health` responde el estado del proceso y de la conexión a la base de datos.
 
 ```json
-{ "success": true, "data": { "status": "ok", "uptime": 128, "database": "connected" },
-  "status": 200, "timestamp": "..." }
+{
+  "success": true,
+  "data": { "status": "ok", "uptime": 128, "database": "connected" },
+  "status": 200,
+  "timestamp": "..."
+}
 ```
 
 Está montada **antes** del limitador de velocidad, a propósito: si compartiera cuota con el tráfico real, el healthcheck del contenedor consumiría el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
@@ -164,9 +168,9 @@ Cuando la base no está conectada la respuesta sigue siendo `200` con `status: "
 
 Swagger se documenta con anotaciones JSDoc en los archivos de rutas.
 
-| Qué | Dónde | Cuándo |
-| --- | --- | --- |
-| Interfaz Swagger | `/api-docs` | Solo con `NODE_ENV=development` |
+| Qué                    | Dónde           | Cuándo                           |
+| ---------------------- | --------------- | -------------------------------- |
+| Interfaz Swagger       | `/api-docs`     | Solo con `NODE_ENV=development`  |
 | Especificación OpenAPI | `/swagger.json` | Siempre, **incluido producción** |
 
 ## 10. Docker
