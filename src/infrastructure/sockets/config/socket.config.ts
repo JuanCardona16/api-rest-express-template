@@ -1,3 +1,4 @@
+import { SOCKET_CORS_ORIGIN } from '@/config/env/enviroments';
 import { Server as HttpServer } from 'node:http';
 import { Server as ServerSocketIO, Socket } from 'socket.io';
 import { authenticatedSocket } from '../middlewares/authenticated';
@@ -8,6 +9,12 @@ declare module 'socket.io' {
     userId: string;
   }
 }
+
+// Lista explicita de origenes. El valor '*' con credentials: true es una
+// contradiccion de CORS y ademas rompe cuando Docker separa los origenes.
+const allowedSocketOrigins: string[] = SOCKET_CORS_ORIGIN.split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
 
 export class SocketManager {
   private static instance: SocketManager;
@@ -26,7 +33,7 @@ export class SocketManager {
   public initialize(httpServer: HttpServer): ServerSocketIO {
     this.io = new ServerSocketIO(httpServer, {
       cors: {
-        origin: '*',
+        origin: allowedSocketOrigins,
         methods: ['GET', 'POST'],
         credentials: true,
       },

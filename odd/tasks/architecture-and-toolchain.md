@@ -29,7 +29,7 @@ Assumption, not a requirement: moving `authentication` away from `modules/<case>
 
 ## Tasks
 
-- T0 — Create `createApp()` and split service connection out of app construction. S5, S6, S7, S8. Route: inline. Check: build + lint.
+- T0 — Create `createApp()` and split service connection out of app construction. S5, S6, S7, S8. Route: inline. Check: build + lint. **DONE** — commit `feat(core)`. Lint was unavailable (see T10), build and runtime smoke check used instead.
 - T1 — Create the `test/` scaffolding, Vitest workspace, `tsconfig.test.json`, pnpm scripts. S1, S2. Route: inline. Check: the four suites run.
 - T2 — Characterization tests for helpers, error middleware and one endpoint per route. S16 (partial). Route: inline. Check: unit + integration green.
 - T3 — Migrate `features/authentication` to technical layers and remove duplicated models and JWT helpers. S3, S9, S10. Route: inline. Check: full suite green.
@@ -38,6 +38,7 @@ Assumption, not a requirement: moving `authentication` away from `modules/<case>
 - T6 — Business rule tests for authentication and user services, and functional flows. S16. Route: inline. Check: unit + functional green.
 - T7 — Docker: `.dockerignore`, multi-stage `Dockerfile`, `compose.yaml`, scripts. S1, S15. Route: inline. Check: stack up and e2e green.
 - T8 — Documentation: README describing the real structure, contribution guide. Route: inline. Check: docs match code.
+- T10 — Restore ESLint. The repo ships `.eslintrc.js` with ESLint 9 installed, which requires `eslint.config.js`, so `pnpm lint` fails before analyzing anything. Added during T0 because lint is the static check every following task relies on. Route: inline. Check: `pnpm lint` runs and reports zero errors on an unchanged baseline.
 
 ## Log
 
@@ -45,3 +46,9 @@ Assumption, not a requirement: moving `authentication` away from `modules/<case>
 - L2 — 2026-10-15. User corrections, verbatim: "Se me olvido decirte que para la compilacion del proyecto, te recomiendo utilizar tsup. Para el tema de la arquitectura la convencion que se va a seguir es la B (capas tecnicas)." Plan updated; both became S4 and S3.
 - L3 — 2026-10-15. Plan approved verbatim: "Listo, tienes luz verde. Plan aprobado."
 - L4 — 2026-10-15. Branch created `refactor/architecture-and-toolchain` from `main`. Work starts at T0.
+- L5 — 2026-10-15. T0 complete. Three pre-existing failures found and confirmed against `main` before being worked around, not introduced by this work:
+  - `pnpm lint` cannot run at all: the repo has `.eslintrc.js` with ESLint 9 installed, which requires `eslint.config.js`. Tracked as T10.
+  - `tsc --noEmit` reports one error, `src/infrastructure/mongoDb/Schemas/user/User.schema.ts:58`, `ICustomError` is not assignable to `Error`. Present identically on `main`. Deferred to the error-contract task.
+  - `jsonwebtoken` cannot be imported on Node 26: `jwa` depends on `buffer-equal-constant-time`, which reads `buffer.SlowBuffer`, removed from Node. The package declared no `engines` field, so nothing warned about it. Added `engines: ">=20 <26"`, `packageManager: "pnpm@12.11.2"`, `.nvmrc` and `.mise.toml`.
+- L6 — 2026-10-15. `pnpm-workspace.yaml` used `onlyBuiltDependencies`, which pnpm 11 replaced with `allowBuilds` and now **ignores silently**. Under pnpm 12 bcrypt was never built. Replaced with `allowBuilds`. Not in the original plan; found while making the build verifiable, and it is exactly the setting the Docker stage depends on.
+- L7 — 2026-10-15. Test runner is therefore `mise exec -- pnpm ...` on Node 20.20.2 until the environment is migrated. This is a property of the environment, not of the code.

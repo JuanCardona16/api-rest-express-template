@@ -1,7 +1,14 @@
-import { createServer } from 'node:http';
-import app from '../core/app';
 import { PORT } from '@/config/env/enviroments';
+import MongoHelpers from '@/infrastructure/mongoDb/lib/MongoHelpers';
 import { SocketManager } from '@/infrastructure/sockets/config/socket.config';
+import { createServer } from 'node:http';
+import { createApp } from './app';
+
+// Punto de entrada: unico lugar que conecta servicios externos y abre el puerto.
+// La construccion de la app vive en `app.ts` y no toca la base de datos.
+MongoHelpers.createDatabaseConnection(process.env.DATABASE_URL as string);
+
+const app = createApp();
 
 // Creamos el servidor HTTP
 const httpServer = createServer(app);

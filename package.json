@@ -17,6 +17,10 @@
   "license": "ISC",
   "type": "module",
   "description": "Sistema de authentication para react con nodejs",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=20 <26"
+  },
   "devDependencies": {
     "@types/bcrypt": "5.0.2",
     "@types/cookie-parser": "1.4.8",
