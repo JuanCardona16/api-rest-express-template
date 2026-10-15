@@ -18,12 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm ANTES de setup-node: con `cache: pnpm`, setup-node necesita el
+      # ejecutable de pnpm en el PATH para resolver el directorio de cache, y
+      # falla con "Unable to locate executable file: pnpm" si no lo encuentra.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -48,12 +51,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm ANTES de setup-node: con `cache: pnpm`, setup-node necesita el
+      # ejecutable de pnpm en el PATH para resolver el directorio de cache, y
+      # falla con "Unable to locate executable file: pnpm" si no lo encuentra.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -66,12 +72,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm ANTES de setup-node: con `cache: pnpm`, setup-node necesita el
+      # ejecutable de pnpm en el PATH para resolver el directorio de cache, y
+      # falla con "Unable to locate executable file: pnpm" si no lo encuentra.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -96,6 +105,12 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Construir imagen
+        # compose declara estas dos con `:?`, o sea que aborta el build si no
+        # estan. Son valores de descarte: solo tienen que existir para que la
+        # interpolacion de compose no corte el comando.
+        env:
+          TOKEN_SECRET_KEY: ci-token-secret
+          REFESCH_TOKEN_SECRET_KEY: ci-refresh-secret
         run: docker compose build api
 
   e2e:
@@ -106,12 +121,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm ANTES de setup-node: con `cache: pnpm`, setup-node necesita el
+      # ejecutable de pnpm en el PATH para resolver el directorio de cache, y
+      # falla con "Unable to locate executable file: pnpm" si no lo encuentra.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
