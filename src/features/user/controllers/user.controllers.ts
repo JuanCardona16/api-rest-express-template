@@ -21,27 +21,23 @@ class UserControllers {
    * GET /users/:uuid
    * Obtener usuario por UUID
    */
-  async getUserByUuid(req: Request, res: Response, _next: NextFunction) {
+  async getUserByUuid(req: Request, _res: Response, _next: NextFunction) {
     const user = (req as any).user;
 
-    const response = await this.userService.getUserByUuid(user.uuid);
-
-    res.status(200).json(response);
+    return this.userService.getUserByUuid(user.uuid);
   }
 
-  async getUserByEmail(req: Request, res: Response, next: NextFunction) {
+  async getUserByEmail(req: Request, _res: Response, next: NextFunction) {
     const { email } = req.params;
 
     if (!email) {
       return next(CustomError(400, 'Bad request'));
     }
 
-    const response = await this.userService.getUserByEmail(email);
-
-    res.status(200).json(response);
+    return this.userService.getUserByEmail(email);
   }
 
-  async updateUser(req: Request, res: Response, next: NextFunction) {
+  async updateUser(req: Request, _res: Response, next: NextFunction) {
     const { uuid } = req.params;
     const { user } = req.body;
 
@@ -49,26 +45,21 @@ class UserControllers {
       return next(CustomError(400, 'Bad request'));
     }
 
-    const response = await this.userService.updateUser(uuid, user);
-
-    res.status(200).json(response);
+    return this.userService.updateUser(uuid, user);
   }
 
-  async deleteUser(req: Request, res: Response, next: NextFunction) {
+  async deleteUser(req: Request, _res: Response, next: NextFunction) {
     const { uuid } = req.params;
 
     if (!uuid) {
       return next(CustomError(400, 'Bad request'));
     }
 
-    const response = await this.userService.deleteUser(uuid);
-
-    res.status(200).json(response);
+    return this.userService.deleteUser(uuid);
   }
 
-  async getAllUsers(_req: Request, res: Response, _next: NextFunction) {
-    const response = await this.userService.getAllUsers();
-    res.status(200).json(response);
+  async getAllUsers(_req: Request, _res: Response, _next: NextFunction) {
+    return this.userService.getAllUsers();
   }
 }
 

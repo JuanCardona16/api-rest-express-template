@@ -36,21 +36,26 @@ describe('POST /api/v1/auth/register', () => {
     expect(response.status).toBe(400);
   });
 
-  /**
-   * COMPORTAMIENTO ACTUAL, NO EL DESEADO.
-   *
-   * El schema de Zod acepta hasta 12 caracteres, pero `validateCharacters` de
-   * PasswordHelpers exige las cuatro categorias y llega hasta 14. Hay dos
-   * fuentes de verdad para "que es una contrasena valida" y no coinciden.
-   */
-  it('acepta por schema una contrasena que el hook de mongoose rechaza', async () => {
+  it('rechaza con 400 una contrasena que no cumple la regla compartida', async () => {
     const response = await request(app)
       .post('/api/v1/auth/register')
       .send({ ...usuarioValido, password: 'abcdefghij' });
 
-    // El schema pasa (10 caracteres), el pre-save de mongoose lo rechaza.
-    expect(response.status).toBe(500);
+    // Antes esta contrasena pasaba el schema y reventaba en el pre-save con 500.
+    expect(response.status).toBe(400);
     expect(response.body.success).toBe(false);
+  });
+
+  it('nunca responde 500 ante una contrasena invalida del cliente', async () => {
+    const invalidas = ['abcdefghij', 'Password123', 'Aa1!aa', 'Password1!Password1!'];
+
+    for (const password of invalidas) {
+      const response = await request(app)
+        .post('/api/v1/auth/register')
+        .send({ ...usuarioValido, email: `u-${password}@example.com`, password });
+
+      expect(response.status, `password: ${password}`).toBe(400);
+    }
   });
 });
 

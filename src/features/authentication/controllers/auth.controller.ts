@@ -14,24 +14,21 @@ class AuthenticationController {
     this.login = this.login.bind(this);
   }
 
-  async register(req: Request, res: Response, next: NextFunction) {
+  async register(req: Request, _res: Response, next: NextFunction) {
     const data = req.body as any;
 
-    if (!data) next(CustomError(500, 'Bad request'));
+    if (!data) return next(CustomError(500, 'Bad request'));
 
-    const response = await this.authServices.register(data);
-
-    res.status(200).send(response);
+    // El controlador devuelve la respuesta y asyncHandler decide el status.
+    return this.authServices.register(data);
   }
 
-  async login(req: Request, res: Response, next: NextFunction) {
+  async login(req: Request, _res: Response, next: NextFunction) {
     const data = req.body as any;
 
-    if (!data || !data.email || !data.password) next(CustomError(400, 'Bad credentials'));
+    if (!data || !data.email || !data.password) return next(CustomError(400, 'Bad credentials'));
 
-    const response = await this.authServices.login(data);
-
-    res.status(200).send(response);
+    return this.authServices.login(data);
   }
 }
 

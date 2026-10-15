@@ -1,4 +1,4 @@
-import CustomApiResponses, { ApiResponses } from '@/config/responses/CustomResponses';
+import CustomApiResponses, { ApiSuccessResponse } from '@/config/responses/CustomResponses';
 import { jwtHelpers } from '@/lib/Jwt';
 import { IUserRepository } from '@/features/user/interfaces';
 import { CustomError } from '@/lib';
@@ -8,7 +8,7 @@ import { LoginRequestData, RegisterRequestData } from '@/features/authentication
 class AuthenticationServices {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  async register(requestData: RegisterRequestData): Promise<ApiResponses> {
+  async register(requestData: RegisterRequestData): Promise<ApiSuccessResponse<string>> {
     if (!requestData) throw CustomError(400, 'Bad Request');
 
     const newUser = await this.userRepository.createUser(requestData);
@@ -18,7 +18,7 @@ class AuthenticationServices {
     return CustomApiResponses.success(token);
   }
 
-  async login(requestData: LoginRequestData): Promise<ApiResponses> {
+  async login(requestData: LoginRequestData): Promise<ApiSuccessResponse<string>> {
     if (!requestData) throw CustomError(400, 'Bad Request');
 
     const user = await this.userRepository.getPasswordByEmail(requestData.email);

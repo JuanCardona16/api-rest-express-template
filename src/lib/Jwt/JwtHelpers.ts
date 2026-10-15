@@ -38,15 +38,24 @@ export class JwtHelpers {
     }
   }
 
-  // Método para refrescar el access token usando un refresh token válido
-  refreshAccessToken<T>(
-    refreschAccessToken: string,
-    expiresIn: string | number = '1h',
-  ): string | null {
-    const decode = this.verifyRefreshToken<Payload<T>>(refreschAccessToken);
+  /**
+   * Refresca un access token a partir de un refresh token valido.
+   *
+   * El payload decodificado ya trae `exp` e `iat`. Firmarlo otra vez sin
+   * quitarlos hace que jsonwebtoken lance "the payload already has an exp
+   * property", y ademas hay que firmarlo con el secreto de acceso, no con el de
+   * refresh: un access token firmado con el secreto equivocado no lo verifica
+   * ni el propio sistema.
+   */
+  refreshAccessToken<T>(refreshToken: string, expiresIn: string | number = '1h'): string | null {
+    const decodificado = this.verifyRefreshToken<Payload<T>>(refreshToken);
 
-    if (decode) return this.generateRefreshToken(decode, expiresIn);
+    if (!decodificado) return null;
 
-    return null;
+    const { iat: _iat, exp: _exp, ...payload } = decodificado as unknown as Record<string, unknown>;
+
+    return jwt.sign(payload as jwt.JwtPayload, this.SECRET_KEY, {
+      expiresIn,
+    } as jwt.SignOptions);
   }
 }

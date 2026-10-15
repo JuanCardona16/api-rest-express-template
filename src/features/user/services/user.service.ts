@@ -1,4 +1,4 @@
-import CustomResponses, { ApiResponses } from '@/config/responses/CustomResponses';
+import CustomResponses, { ApiSuccessResponse } from '@/config/responses/CustomResponses';
 import { CustomError } from '@/lib';
 import { IUserRepository } from '@/features/user/interfaces';
 import { User } from '@/features/user/interfaces';
@@ -6,7 +6,7 @@ import { User } from '@/features/user/interfaces';
 class UserServices {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  async getUserByUuid(uuid: string): Promise<ApiResponses> {
+  async getUserByUuid(uuid: string): Promise<ApiSuccessResponse<User>> {
     if (!uuid) throw CustomError(400, 'Bad request');
 
     const user = await this.userRepository.getUserByUuid(uuid);
@@ -16,7 +16,7 @@ class UserServices {
     return CustomResponses.success(user);
   }
 
-  async getUserByEmail(email: string): Promise<ApiResponses> {
+  async getUserByEmail(email: string): Promise<ApiSuccessResponse<User>> {
     if (!email) throw CustomError(400, 'Bad request');
 
     const user = await this.userRepository.getUserByEmail(email);
@@ -26,7 +26,7 @@ class UserServices {
     return CustomResponses.success(user);
   }
 
-  async updateUser(uuid: string, user: Partial<User>): Promise<ApiResponses> {
+  async updateUser(uuid: string, user: Partial<User>): Promise<ApiSuccessResponse<User>> {
     if (!uuid) throw CustomError(400, 'Bad request');
 
     const updatedUser = await this.userRepository.updateUser(uuid, user);
@@ -36,7 +36,7 @@ class UserServices {
     return CustomResponses.success(updatedUser);
   }
 
-  async deleteUser(uuid: string): Promise<ApiResponses> {
+  async deleteUser(uuid: string): Promise<ApiSuccessResponse<User>> {
     if (!uuid) throw CustomError(400, 'Bad request');
 
     const deletedUser = await this.userRepository.deleteUser(uuid);
@@ -46,7 +46,7 @@ class UserServices {
     return CustomResponses.success(deletedUser);
   }
 
-  async getAllUsers(): Promise<ApiResponses> {
+  async getAllUsers(): Promise<ApiSuccessResponse<User[]>> {
     const users = await this.userRepository.getAllUsers();
 
     if (!users) throw CustomError(404, 'Users not found');

@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
 import { CustomError } from '@/lib';
 import { AuthMethods, User } from '@/features/user/interfaces/user.types';
+import { PASSWORD_RULE_MESSAGE } from '@/features/authentication/schemas/password.schema';
 
 const UserMongoSchema = new Schema<User>(
   {
@@ -53,14 +54,11 @@ UserMongoSchema.pre('save', async function (next) {
       this.password = PasswordHelpers.generateSecurePassword(this.username);
     }
   } else {
-    // Validar la contraseña solo si el método de autenticación no es GOOGLE
+    // Validar la contraseña solo si el método de autenticación no es GOOGLE.
+    // Es la misma regla que aplica el schema de Zod, para que una contraseña
+    // inválida se rechace en la capa de entrada y no reviente acá con un 500.
     if (!PasswordHelpers.validateCharacters(this.password)) {
-      return next(
-        CustomError(
-          400,
-          'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character',
-        ),
-      );
+      return next(CustomError(400, PASSWORD_RULE_MESSAGE));
     }
   }
   this.password = PasswordHelpers.generateHashing(this.password, 12);

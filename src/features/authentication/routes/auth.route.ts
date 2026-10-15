@@ -31,8 +31,8 @@ const authenticationPaths: Router = Router();
  *                 type: string
  *                 example: johndoe
  *     responses:
- *       201:
- *         description: User registered successfully
+ *       200:
+ *         description: User registered successfully, returns a JWT
  *       400:
  *         description: Bad request
  */
