@@ -1,7 +1,7 @@
 import { PrivateRoutes } from '@/constants';
 import { authorize } from '@/core/middleware/auth/authorize';
 import { Router } from 'express';
-import { userControllers } from '../controller/user.controllers';
+import { userControllers } from '@/features/user/controllers/user.controllers';
 import { asyncHandler } from '@/core/errors';
 
 const userRouterPaths: Router = Router();

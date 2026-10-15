@@ -1,6 +1,6 @@
 import { CustomError } from '@/lib';
 import { NextFunction, Request, Response } from 'express';
-import AuthenticationServices from '@/features/authentication/modules/basic/services/auth.service';
+import AuthenticationServices from '@/features/authentication/services/auth.service';
 import { MongoUserRepository } from '@/features/user/repository/mongoUserRepositories';
 
 class AuthenticationController {

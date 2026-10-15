@@ -1,6 +1,6 @@
 import { CustomError } from '@/lib';
 import { RequestHandler } from 'express';
-import ChangePasswordService from '../services/changePassword.service';
+import ChangePasswordService from '@/features/authentication/services/changePassword.service';
 import CustomApiResponses from '@/config/responses/CustomResponses';
 
 class ChangePasswordController {

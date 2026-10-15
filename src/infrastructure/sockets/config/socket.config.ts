@@ -1,8 +1,8 @@
 import { SOCKET_CORS_ORIGIN } from '@/config/env/enviroments';
 import { Server as HttpServer } from 'node:http';
 import { Server as ServerSocketIO, Socket } from 'socket.io';
-import { authenticatedSocket } from '../middlewares/authenticated';
-import { UserPresenceManager } from '../presence/UserPresenceManaget';
+import { authenticatedSocket } from '@/infrastructure/sockets/middlewares/authenticated';
+import { UserPresenceManager } from '@/infrastructure/sockets/presence/UserPresenceManaget';
 
 declare module 'socket.io' {
   interface Socket {

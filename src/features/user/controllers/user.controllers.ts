@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import UserServices from '../services/user.service';
-import { MongoUserRepository } from '../repository/mongoUserRepositories';
+import UserServices from '@/features/user/services/user.service';
+import { MongoUserRepository } from '@/features/user/repository/mongoUserRepositories';
 import { CustomError } from '@/lib';
 
 class UserControllers {

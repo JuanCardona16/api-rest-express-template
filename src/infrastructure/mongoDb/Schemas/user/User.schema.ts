@@ -2,7 +2,7 @@ import { Schema } from 'mongoose';
 import crypto from 'node:crypto';
 import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
 import { CustomError } from '@/lib';
-import { AuthMethods, User } from '@/features/user/model/User.model';
+import { AuthMethods, User } from '@/features/user/interfaces/user.types';
 
 const UserMongoSchema = new Schema<User>(
   {

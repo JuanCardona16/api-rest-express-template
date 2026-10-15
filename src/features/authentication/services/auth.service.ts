@@ -1,9 +1,9 @@
 import CustomApiResponses, { ApiResponses } from '@/config/responses/CustomResponses';
-import { jwtHelpers } from '@/core/security/security';
-import { IUserRepository } from '@/features/user/interfaces/IUserRepository';
+import { jwtHelpers } from '@/lib/Jwt';
+import { IUserRepository } from '@/features/user/interfaces';
 import { CustomError } from '@/lib';
-import PasswordHelpers from '../../../../../lib/Passwords/PasswordHelpers';
-import { LoginRequestData, RegisterRequestData } from '../types';
+import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
+import { LoginRequestData, RegisterRequestData } from '@/features/authentication/interfaces';
 
 class AuthenticationServices {
   constructor(private readonly userRepository: IUserRepository) {}

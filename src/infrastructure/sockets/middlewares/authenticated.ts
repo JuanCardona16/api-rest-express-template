@@ -1,4 +1,4 @@
-import { jwtHelpers } from '@/core/security/security';
+import { jwtHelpers } from '@/lib/Jwt';
 import { ExtendedError, Socket } from 'socket.io';
 
 export const authenticatedSocket = (socket: Socket, next: (err?: ExtendedError) => void) => {
