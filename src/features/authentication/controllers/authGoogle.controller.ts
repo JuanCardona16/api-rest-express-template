@@ -1,17 +1,15 @@
-import { CustomError } from '@/lib';
-import { NextFunction, Request, Response } from 'express';
 import AuthenticationGoogleServices from '@/features/authentication/services/authGoogle.service';
+import { MongoUserRepository } from '@/features/user/repository/mongoUserRepositories';
+import { Request } from 'express';
 
-class AuthenticationGoogleController {
-  async login(req: Request, res: Response, next: NextFunction) {
+class GoogleAuthController {
+  login = async (req: Request) => {
     const { code } = req.body as { code: string };
 
-    if (!code) return next(CustomError(500, 'Codigo no valido o no encontrado'));
+    const servicio = new AuthenticationGoogleServices(new MongoUserRepository());
 
-    const response = await AuthenticationGoogleServices.autenticate(code);
-
-    res.status(200).send(response);
-  }
+    return servicio.login(code);
+  };
 }
 
-export default new AuthenticationGoogleController();
+export const AuthenticationGoogleController = new GoogleAuthController();

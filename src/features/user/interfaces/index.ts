@@ -1,7 +1,15 @@
 import { RegisterRequestData } from '@/features/authentication/interfaces';
-import { AuthMethods, User } from './user.types';
+import { AuthMethods } from './user.types';
 
 export * from './user.types';
+
+export interface User {
+  uuid: string;
+  username: string;
+  email: string;
+  password: string;
+  authenticationMethod: AuthMethods;
+}
 
 /**
  * Contrato de acceso a datos de usuarios.
@@ -16,11 +24,8 @@ export interface IUserRepository {
   getUserByEmail(email: string): Promise<User | null>;
   createUser(user: RegisterRequestData): Promise<User>;
   updateUser(uuid: string, user: Partial<User>): Promise<User | null>;
+  updatePasswordByEmail(email: string, hashedPassword: string): Promise<User | null>;
   deleteUser(uuid: string): Promise<User | null>;
   getAllUsers(): Promise<User[]>;
   getPasswordByEmail(email: string): Promise<{ uuid: string; password: string } | null>;
-}
-
-export interface UpdateUserData extends Partial<Omit<User, 'uuid'>> {
-  authenticationMethod?: AuthMethods;
 }

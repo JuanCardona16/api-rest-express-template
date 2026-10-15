@@ -31,6 +31,9 @@ export const crearRepositorioDeUsuariosMock = () => ({
   getUserByEmail: vi.fn(async (_email: string): Promise<User | null> => null),
   createUser: vi.fn(async (_user: RegisterRequestData): Promise<User> => usuarioDePrueba()),
   updateUser: vi.fn(async (_uuid: string, _user: Partial<User>): Promise<User | null> => null),
+  updatePasswordByEmail: vi.fn(
+    async (_email: string, _hashedPassword: string): Promise<User | null> => null,
+  ),
   deleteUser: vi.fn(async (_uuid: string): Promise<User | null> => null),
   getAllUsers: vi.fn(async (): Promise<User[]> => []),
   getPasswordByEmail: vi.fn(

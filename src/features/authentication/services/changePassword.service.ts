@@ -1,61 +1,88 @@
-/**
- * DEUDA CONOCIDA: este servicio escribe contra el modelo de mongoose en lugar
- * de pasar por IUserRepository. Se corrige cuando se expongan las rutas y el
- * servicio tenga cobertura. Ver L11 en odd/tasks/architecture-and-toolchain.md.
- */
-import { Resend } from 'resend';
-import InMemoryCodeSecurity from '@/features/authentication/helpers/InMemoryCodeSecurityService';
+import CustomApiResponses, { ApiSuccessResponse } from '@/config/responses/CustomResponses';
+import {
+  ChangePasswordRequest,
+  MailSender,
+  VerifyCodeRequest,
+} from '@/features/authentication/interfaces';
+import InMemoryCodeSecurityService from '@/features/authentication/helpers/InMemoryCodeSecurityService';
+import { IUserRepository } from '@/features/user/interfaces';
+import { CustomError } from '@/lib';
 import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
-import CustomApiResponses from '@/config/responses/CustomResponses';
-import { RESEND_KEY } from '@/config/env/enviroments';
-import UserModel from '@/infrastructure/mongoDb/Schemas/user/UserModel';
+import { jwtHelpers } from '@/lib/Jwt';
 
+/**
+ * Recuperación de contraseña.
+ *
+ * El repositorio y el cliente de correo llegan por constructor. Antes este
+ * servicio escribía contra el modelo de mongoose, saltándose el puerto, y el
+ * controlador era un singleton con `this.key = email`: dos personas recuperando
+ * al mismo tiempo se pisaban la clave.
+ */
 class ChangePasswordService {
-  private resend: Resend;
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly mailSender: MailSender,
+  ) {}
 
-  constructor() {
-    if (!RESEND_KEY) {
-      throw new Error('RESEND_KEY no está configurado en las variables de entorno.');
-    }
-    this.resend = new Resend(RESEND_KEY);
-  }
+  /**
+   * Genera y envía un código.
+   *
+   * Responde siempre lo mismo, exista o no el email: un endpoint que distingue
+   * los dos casos es un oráculo de qué correos están registrados.
+   */
+  public sendCodeForEmail = async (email: string): Promise<ApiSuccessResponse<string>> => {
+    const codigo = InMemoryCodeSecurityService.createCode(email);
 
-  public sendCodeForEmail = async (email: string) => {
     try {
-      const code = InMemoryCodeSecurity.createCode(email); // Cambiar a este método según su implementación
-
-      await this.resend.emails.send({
-        from: 'onboarding@resend.dev', // Cambiar a este dominio
-        to: [email],
-        subject: 'Cambio de Contraseña',
-        html: `<p>Este es tu codigo para recuperar tu contraseña <strong>${code}</strong>. Espira en 5 minutos.</p>`,
-      });
+      await this.mailSender.sendPasswordResetCode(email, codigo);
     } catch {
-      return CustomApiResponses.error('Error al enviar el codigo de verificacion');
-    }
-  };
-
-  public verifyCode = async (code: string) => {
-    const isCorrect = InMemoryCodeSecurity.verifyCode(code);
-
-    if (!isCorrect) {
-      throw new Error('El código es incorrecto o expiró.');
+      // Un fallo del proveedor de correo no puede convertirse en un 500 que le
+      // diga al usuario que su cuenta existe y que el problema es nuestro.
+      InMemoryCodeSecurityService.clear();
     }
 
-    return true;
+    return CustomApiResponses.success('If the email exists, a code has been sent');
   };
 
-  public changePassword = async (data: { email: string; newPassword: string }) => {
-    const hashedPassword = PasswordHelpers.generateHashing(data.newPassword, 12);
+  /** Verifica el código y devuelve un token de un solo uso para cambiar la clave. */
+  public verifyCode = async ({
+    email,
+    code,
+  }: VerifyCodeRequest): Promise<ApiSuccessResponse<{ token: string }>> => {
+    const esValido = InMemoryCodeSecurityService.verifyCode(email, code);
 
-    await UserModel.findOneAndUpdate(
-      { email: data.email },
-      { password: hashedPassword },
-      { new: true },
-    );
+    if (!esValido) {
+      throw CustomError(400, 'The code is incorrect or expired', 'INVALID_CODE');
+    }
 
-    return CustomApiResponses.success('Contraseña actualizada correctamente!');
+    const token = jwtHelpers.generateToken<string>({ payload: email }, '15m');
+
+    return CustomApiResponses.success({ token });
+  };
+
+  public changePassword = async ({
+    email,
+    token,
+    newPassword,
+  }: ChangePasswordRequest): Promise<ApiSuccessResponse<string>> => {
+    const payload = jwtHelpers.verifyToken<string>(token);
+
+    // El token lleva el email al que se autorizó el cambio: usarlo impide que
+    // quien tenga un código pueda cambiarle la clave a otra cuenta.
+    if (!payload?.payload || payload.payload !== email) {
+      throw CustomError(401, 'Invalid or expired reset token', 'INVALID_RESET_TOKEN');
+    }
+
+    const hashedPassword = PasswordHelpers.generateHashing(newPassword, 12);
+
+    const actualizado = await this.userRepository.updatePasswordByEmail(email, hashedPassword);
+
+    if (!actualizado) {
+      throw CustomError(404, 'User not found', 'NOT_FOUND');
+    }
+
+    return CustomApiResponses.success('Password updated successfully');
   };
 }
 
-export default new ChangePasswordService();
+export default ChangePasswordService;

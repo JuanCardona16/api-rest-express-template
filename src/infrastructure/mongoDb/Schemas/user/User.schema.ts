@@ -30,7 +30,12 @@ const UserMongoSchema = new Schema<User>(
     },
     password: {
       type: String,
-      required: true,
+      // Google no manda contraseña: el hook `pre('save')` genera una aleatoria.
+      // Declararla obligatoria hacia que el usuario de Google nunca pudiera
+      // crearse, y por eso el servicio pasaba un placeholder de dos caracteres.
+      required: function () {
+        return this.authenticationMethod === AuthMethods.BASIC;
+      },
       trim: true,
     },
     authenticationMethod: {
