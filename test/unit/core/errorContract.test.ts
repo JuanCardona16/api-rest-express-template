@@ -46,14 +46,14 @@ describe('GlobalHandleError', () => {
     GlobalHandleError(CustomError(404, 'User not found', 'NOT_FOUND'), {} as Request, res, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(404);
+
     const cuerpo = vi.mocked(res.json).mock.calls[0][0];
-    expect(cuerpo.success).toBe(false);
-    expect(cuerpo.error).toMatchObject({
-      message: 'User not found',
-      code: 'NOT_FOUND',
+    expect(cuerpo).toEqual({
+      success: false,
       status: 404,
+      timestamp: expect.any(String),
+      error: { message: 'User not found', code: 'NOT_FOUND' },
     });
-    expect(typeof cuerpo.error.timestamp).toBe('string');
   });
 
   it('cae a 500 y INTERNAL_ERROR cuando el error no trae status ni code', () => {
@@ -62,10 +62,10 @@ describe('GlobalHandleError', () => {
     GlobalHandleError(new Error('algo fallo'), {} as Request, res, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(vi.mocked(res.json).mock.calls[0][0].error).toMatchObject({
-      message: 'algo fallo',
-      code: 'INTERNAL_ERROR',
+    expect(vi.mocked(res.json).mock.calls[0][0]).toMatchObject({
+      success: false,
       status: 500,
+      error: { message: 'algo fallo', code: 'INTERNAL_ERROR' },
     });
   });
 });
@@ -85,8 +85,35 @@ describe('asyncHandler', () => {
     expect(vi.mocked(res.json).mock.calls[0][0]).toEqual({
       success: true,
       data: { uuid: '1' },
+      status: 200,
+      timestamp: expect.any(String),
     });
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it('responde 201 cuando el servicio pide creacion', async () => {
+    const res = crearRes();
+
+    await asyncHandler(async () => CustomApiResponses.success({ uuid: '1' }, 201))(
+      crearReq(),
+      res,
+      vi.fn(),
+    );
+
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('responde 204 sin cuerpo cuando el servicio pide No Content', async () => {
+    const res = crearRes();
+
+    await asyncHandler(async () => CustomApiResponses.success(undefined, 204))(
+      crearReq(),
+      res,
+      vi.fn(),
+    );
+
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.json).not.toHaveBeenCalled();
   });
 
   /**

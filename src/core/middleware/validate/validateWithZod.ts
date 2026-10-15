@@ -10,7 +10,8 @@ export const validateWithZod =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return next(CustomError(400, error.errors.map((e) => e.message).join(', ')));
+        // `issues` es el nombre actual; `errors` quedo deprecado en Zod 3.25.
+        return next(CustomError(400, error.issues.map((issue) => issue.message).join(', ')));
       }
       next(error);
     }

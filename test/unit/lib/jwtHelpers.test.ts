@@ -1,7 +1,12 @@
+import { jwtHelpers } from '@/lib/Jwt';
 import { JwtHelpers } from '@/lib/Jwt/JwtHelpers';
+import jwt from 'jsonwebtoken';
 import { describe, expect, it } from 'vitest';
 
 const helpers = new JwtHelpers('secreto-de-test', 'secreto-de-refresh-de-test');
+
+// El singleton configurado tambien tiene que cumplir el mismo contrato.
+void jwtHelpers;
 
 describe('JwtHelpers', () => {
   describe('generateToken y verifyToken', () => {
@@ -38,34 +43,40 @@ describe('JwtHelpers', () => {
   });
 
   describe('refreshAccessToken', () => {
-    /**
-     * COMPORTAMIENTO ACTUAL, NO EL DESEADO.
-     *
-     * `refreshAccessToken` devuelve `generateRefreshToken(...)`, es decir, firma
-     * con el secreto de refresh y no con el de acceso. Quien llame a este metodo
-     * esperando un access token obtiene un refresh token, y despues
-     * `verifyToken` lo rechaza. Queda congelado aca para que el cambio sea
-     * explicito y no accidental.
-     */
     it('devuelve null cuando el refresh token no es valido', () => {
       expect(helpers.refreshAccessToken('refresh-inventado')).toBeNull();
     });
 
-    it('lanza en vez de refrescar: jsonwebtoken rechaza el exp que ya trae el payload', () => {
+    it('devuelve un token que verifica con el secreto de acceso', () => {
       const refreshToken = helpers.generateRefreshToken({ payload: 'uuid-de-usuario' }, '7d');
 
-      /**
-       * COMPORTAMIENTO ACTUAL, NO EL DESEADO.
-       *
-       * El refresh token decodificado ya trae `exp`, y `generateRefreshToken`
-       * vuelve a pasar `expiresIn`. jsonwebtoken lanza "the payload already has
-       * an exp property". Es decir: `refreshAccessToken` no refresca, revienta.
-       * Y ademas firmaria con el secreto de refresh, no con el de acceso.
-       * Queda congelado aca; la correccion es S11.
-       */
-      expect(() => helpers.refreshAccessToken(refreshToken, '1h')).toThrow(
-        /already has an "exp" property/,
+      const accessToken = helpers.refreshAccessToken(refreshToken, '1h');
+
+      expect(accessToken).not.toBeNull();
+      expect(helpers.verifyToken(accessToken!)?.payload).toBe('uuid-de-usuario');
+    });
+
+    it('el token renovado no conserva el exp del refresh token original', () => {
+      const refreshToken = helpers.generateRefreshToken({ payload: 'uuid-de-usuario' }, '7d');
+      const decodificado = helpers.verifyRefreshToken<{ payload: string; exp: number }>(
+        refreshToken,
       );
+
+      const accessToken = helpers.refreshAccessToken(refreshToken, '1h')!;
+      const nuevos = jwt.decode(accessToken) as { exp: number };
+
+      // 1h contra los 7d del refresh token: si fueran el mismo, exp coincidiria.
+      expect(nuevos.exp).toBeLessThan(decodificado!.exp);
+    });
+
+    it('respeta el expiresIn pedido', () => {
+      const refreshToken = helpers.generateRefreshToken({ payload: 'uuid-de-usuario' }, '7d');
+
+      const accessToken = helpers.refreshAccessToken(refreshToken, '30d')!;
+      const decodificado = jwt.decode(accessToken) as { exp: number };
+      const original = jwt.decode(refreshToken) as { exp: number };
+
+      expect(decodificado.exp).toBeGreaterThan(original.exp);
     });
   });
 });

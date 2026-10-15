@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from './password.schema';
 
 export const registerSchema = z.object({
   username: z.string({
@@ -9,25 +10,22 @@ export const registerSchema = z.object({
       required_error: 'Email is required',
     })
     .email({ message: 'Invalid email' }),
-  password: z
-    .string({
-      required_error: 'Password is required',
-    })
-    .min(6, { message: 'Password must be at least 6 characters' })
-    .max(12, { message: 'Password must be at most 12 characters' }),
+  password: passwordSchema,
   authenticationMethod: z.enum(['BASIC', 'GOOGLE']).default('BASIC'),
 });
 
+/**
+ * En el login el password solo tiene que estar presente.
+ *
+ * Aplicar aqui la regla de creacion haria que una contrasena incorrecta pero
+ * debil devolviera 400 en vez del 403 que corresponde: el cliente aprenderia las
+ * reglas de validacion por la puerta de atrás y la respuesta seria confusa.
+ */
 export const loginSchema = z.object({
   email: z
     .string({
       required_error: 'Email is required',
     })
     .email({ message: 'Invalid email' }),
-  password: z
-    .string({
-      required_error: 'Password is required',
-    })
-    .min(6, { message: 'Password must be at least 6 characters' })
-    .max(12, { message: 'Password must be at most 12 characters' }),
+  password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required'),
 });
