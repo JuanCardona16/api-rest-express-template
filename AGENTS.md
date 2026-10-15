@@ -55,7 +55,7 @@ envolvelo en `newgrp docker -c "..."`.
 - Habilitar las rutas comentadas de cambio de contraseña y login de Google en
   `features/authentication/routes/auth.route.ts`.
 - Cambiar un código HTTP existente o la forma del JSON de respuesta.
-- Tocar `LICENSE`: dice MIT y `package.json` dice ISC. La decisión es del dueño.
+- Cambiar la licencia o el texto de `LICENSE`.
 - Modificar el schema de la colección `users`.
 - Agregar una dependencia.
 - Cambiar el rango de Node.
@@ -82,6 +82,7 @@ envolvelo en `newgrp docker -c "..."`.
 
 - Formato: `tipo/short-description` (ej: `feat/auth-oauth`, `fix/n1-user-list`)
 - Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `chore`, `style`
+- Las ramas salen de `main` y se mergean a `main`
 
 ### Commit format
 

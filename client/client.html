@@ -2,46 +2,86 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Socket Test</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>Cliente WebSocket</title>
+    <!--
+      Cliente de prueba manual para WebSockets.
+
+      El token NO va hardcodeado en este archivo: se pega en el campo de abajo en
+      cada sesión. Un JWT commiteado es un secret en el repositorio, y aunque
+      expire sigue revelando el esquema de firma y un identificador real.
+
+      Para obtener un token: registrate o logueate contra la API y usá el `data`
+      que devuelve la respuesta.
+
+      Serví este archivo con cualquier servidor estático y abrilo en el navegador.
+    -->
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   </head>
   <body>
     <h1>Cliente WebSocket</h1>
+
+    <form id="token-form">
+      <label for="token">Token de acceso</label>
+      <input id="token" type="password" autocomplete="off" placeholder="pegar el JWT" />
+      <button type="submit">Conectar</button>
+    </form>
+
     <div>
       <form id="form">
-        <input id="input" autocomplete="off" />
-        <button>Send</button>
+        <input id="input" autocomplete="off" placeholder="mensaje" />
+        <button type="submit">Enviar</button>
       </form>
     </div>
-    <script>
-      const socket = io('http://localhost:3001', {
-        auth: {
-          token:
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXlsb2FkIjoiYTk5ZThhZmEtMmI4MS00MDgxLWJmZmYtZDk1ZWUzZWRmNmEwIiwiaWF0IjoxNzUxMzA1ODU1LCJleHAiOjE3NTE0Nzg2NTV9.gz5kmy8IPPtSDn5BJ1Xw942jBZL8Nb_Dk3x09IQ4FOA',
-        },
-      });
 
+    <pre id="status">Sin conectar</pre>
+
+    <script>
+      // El puerto lo define la variable de entorno PORT del servidor.
+      const API_URL = window.location.origin || 'http://localhost:3000';
+
+      const tokenForm = document.getElementById('token-form');
+      const tokenInput = document.getElementById('token');
       const form = document.getElementById('form');
       const input = document.getElementById('input');
+      const status = document.getElementById('status');
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
+      let socket = null;
+
+      const mostrar = (texto) => {
+        status.textContent = texto;
+      };
+
+      tokenForm.addEventListener('submit', (evento) => {
+        evento.preventDefault();
+
+        const token = tokenInput.value.trim();
+
+        if (!token) {
+          mostrar('Pega un token antes de conectar.');
+          return;
+        }
+
+        socket = io(API_URL, { auth: { token } });
+
+        socket.on('connect', () => mostrar(`Conectado. socket.id: ${socket.id}`));
+        socket.on('connect_error', (error) => mostrar(`Error de conexión: ${error.message}`));
+        socket.on('authenticated', (message) => mostrar(`Autenticado: ${JSON.stringify(message)}`));
+        socket.on('message', (message) => mostrar(`Mensaje: ${JSON.stringify(message)}`));
+        socket.on('disconnect', () => mostrar('Desconectado'));
+      });
+
+      form.addEventListener('submit', (evento) => {
+        evento.preventDefault();
+
+        if (!socket) {
+          mostrar('Conectate primero.');
+          return;
+        }
+
         if (input.value) {
           socket.emit('chat message', input.value);
           input.value = '';
         }
-      });
-
-      socket.on('connect', () => {
-        console.log('✅ Conectado como socket:', socket.id);
-
-        socket.on('authenticated', (message) => {
-          console.log('📥 Mensaje recibido:', message);
-        });
-
-        socket.on('message', (message) => {
-          console.log('📥 Mensaje recibido:', message);
-        });
       });
     </script>
   </body>
