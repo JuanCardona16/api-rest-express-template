@@ -205,8 +205,7 @@ Documentada a propósito, no resuelta:
 - **La conexión a Mongo no se espera.** `core/index.ts` empieza a escuchar antes de confirmar la base de datos.
 - **CORS loguea en producción.** `corsConfig.ts` tiene `console.log` en cada request y `console.error` por origen rechazado, con un comentario que dice "solo para desarrollo" pero sin la condición que lo haga cierto. La lista de orígenes además es fija en el código y no incluye el puerto por defecto.
 - **`ioredis` y `cookie-parser`** siguen declarados y sin usar.
-- **La licencia está contradicha.** `LICENSE` dice MIT y `package.json` dice ISC.
 
 ## 13. Licencia
 
-**Hay una contradicción que resolver.** El archivo `LICENSE` contiene la licencia MIT y el `package.json` declara `"license": "ISC"`. Mismo proyecto, dos licencias distintas. Nadie debería publicar sin decidir cuál es la real.
+MIT. Ver `LICENSE`.
