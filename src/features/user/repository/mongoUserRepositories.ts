@@ -5,6 +5,19 @@ import { IUserRepository } from '@/features/user/interfaces';
 import { RegisterRequestData } from '@/features/authentication/interfaces';
 import { User } from '@/features/user/interfaces';
 
+/**
+ * MongoDB lanza un error de clave duplicada con code 11000 cuando un indice
+ * unico no se puede cumplir. Es la unica señal que distingue "el email ya
+ * existe" de una falla real de la base.
+ */
+const DUPLICATE_KEY_ERROR = 11000;
+
+const esClaveDuplicada = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as { code?: unknown }).code === DUPLICATE_KEY_ERROR;
+
 // El Repository solo retorna datos, el Service maneja la lógica
 export class MongoUserRepository implements IUserRepository {
   constructor(private readonly userModel: Model<User> = UserModel) {}
@@ -31,7 +44,12 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const newUser = await this.userModel.create(user);
       return newUser;
-    } catch {
+    } catch (error) {
+      // El indice unico de mongoose lanza cuando el email ya existe. Eso no es
+      // una falla del servidor sino input del cliente: responder 500 hacia que la
+      // API se haga culpable de algo que el usuario hizo bien.
+      if (esClaveDuplicada(error)) throw CustomError(409, 'Email already in use', 'CONFLICT');
+
       throw CustomError(500, 'Internal server error');
     }
   }

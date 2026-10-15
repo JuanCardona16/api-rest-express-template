@@ -72,10 +72,11 @@ describe('flujo de registro y acceso', () => {
 
     const segundo = await request(app).post('/api/v1/auth/register').send(usuario);
 
-    // El indice unico de mongoose rechaza el duplicado; el repositorio lo
-    // convierte en 500. No es la respuesta ideal, pero es el comportamiento real.
-    expect(segundo.status).toBe(500);
+    // El indice unico de mongoose rechaza el duplicado y el repositorio lo
+    // traduce a 409: es input del cliente, no una falla del servidor.
+    expect(segundo.status).toBe(409);
     expect(segundo.body.success).toBe(false);
+    expect(segundo.body.error.code).toBe('CONFLICT');
   });
 });
 
@@ -87,7 +88,7 @@ describe('flujo de autenticacion fallida', () => {
       .post('/api/v1/auth/login')
       .send({ email: usuario.email, password: 'Incorrecta1!' });
 
-    expect(login.status).toBe(403);
+    expect(login.status).toBe(401);
     expect(login.body.data).toBeUndefined();
   });
 

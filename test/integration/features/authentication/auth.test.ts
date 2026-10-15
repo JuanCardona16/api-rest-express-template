@@ -72,24 +72,24 @@ describe('POST /api/v1/auth/login', () => {
     expect(typeof response.body.data).toBe('string');
   });
 
-  it('responde 404 cuando el usuario no existe', async () => {
+  it('responde 401 cuando el usuario no existe', async () => {
     const response = await request(app)
       .post('/api/v1/auth/login')
       .send({ email: 'nadie@example.com', password: 'Password1!' });
 
-    expect(response.status).toBe(404);
-    expect(response.body.error.message).toBe('User not found');
+    expect(response.status).toBe(401);
+    expect(response.body.error.message).toBe('Invalid credentials');
   });
 
-  it('responde 403 cuando la contrasena no coincide', async () => {
+  it('responde 401 cuando la contrasena no coincide', async () => {
     await request(app).post('/api/v1/auth/register').send(usuarioValido);
 
     const response = await request(app)
       .post('/api/v1/auth/login')
       .send({ email: usuarioValido.email, password: 'OtraClave1!' });
 
-    expect(response.status).toBe(403);
-    expect(response.body.error.message).toBe('Password incorrect');
+    expect(response.status).toBe(401);
+    expect(response.body.error.message).toBe('Invalid credentials');
   });
 });
 

@@ -82,38 +82,54 @@ describe('AuthenticationServices', () => {
       );
     });
 
-    it('rechaza con 404 cuando el usuario no existe', async () => {
+    it('rechaza con credenciales invalidas cuando el usuario no existe', async () => {
       repositorio.getPasswordByEmail.mockResolvedValue(null);
 
       await expect(
         servicio.login({ email: 'nadie@example.com', password: contrasenaValida }),
-      ).rejects.toMatchObject({ status: 404, message: 'User not found' });
+      ).rejects.toMatchObject({ status: 401, message: 'Invalid credentials' });
     });
 
-    it('rechaza con 403 cuando la contrasena no coincide', async () => {
+    it('rechaza con credenciales invalidas cuando la contrasena no coincide', async () => {
       await expect(
         servicio.login({ email: 'juan@example.com', password: 'OtraClave1!' }),
-      ).rejects.toMatchObject({ status: 403, message: 'Password incorrect' });
+      ).rejects.toMatchObject({ status: 401, message: 'Invalid credentials' });
     });
 
-    it('no distingue 404 de 403 por tiempo: ambos revelan que el usuario existe', async () => {
-      // Ambos mensajes son distintos y ambos confirman que hubo una busqueda.
-      // Este test documenta el comportamiento, no lo aprueba.
-      const inicio404 = Date.now();
+    it('no revela si el email esta registrado: status, mensaje y code son identicos', async () => {
+      repositorio.getPasswordByEmail.mockResolvedValue(null);
+      const noExiste = await servicio
+        .login({ email: 'nadie@example.com', password: contrasenaValida })
+        .catch((error) => error);
+
+      const contrasenaIncorrecta = await servicio
+        .login({ email: 'juan@example.com', password: 'OtraClave1!' })
+        .catch((error) => error);
+
+      // Antes eran 404 'User not found' y 403 'Password incorrect': dos respuestas
+      // distintas que confirmaban si una cuenta estaba registrada.
+      expect(noExiste.status).toBe(contrasenaIncorrecta.status);
+      expect(noExiste.message).toBe(contrasenaIncorrecta.message);
+      expect(noExiste.code).toBe(contrasenaIncorrecta.code);
+    });
+
+    it('no distingue los dos casos por tiempo', async () => {
+      const inicioNoExiste = Date.now();
       repositorio.getPasswordByEmail.mockResolvedValue(null);
       await servicio
         .login({ email: 'nadie@example.com', password: contrasenaValida })
         .catch(() => null);
-      const fin404 = Date.now();
+      const finNoExiste = Date.now();
 
-      const inicio403 = Date.now();
+      const inicioIncorrecta = Date.now();
       await servicio
         .login({ email: 'juan@example.com', password: 'OtraClave1!' })
         .catch(() => null);
-      const fin403 = Date.now();
+      const finIncorrecta = Date.now();
 
-      // Mismo orden de magnitud: no hay una diferencia de tiempo obvia.
-      expect(Math.abs(fin404 - inicio404 - (fin403 - inicio403))).toBeLessThan(50);
+      expect(
+        Math.abs(finNoExiste - inicioNoExiste - (finIncorrecta - inicioIncorrecta)),
+      ).toBeLessThan(50);
     });
 
     it('rechaza con 400 cuando no llegan datos', async () => {
@@ -124,7 +140,7 @@ describe('AuthenticationServices', () => {
     it('no filtra la existencia del usuario cuando la contrasena es vacia', async () => {
       await expect(
         servicio.login({ email: 'juan@example.com', password: '' }),
-      ).rejects.toMatchObject({ status: 403 });
+      ).rejects.toMatchObject({ status: 401 });
     });
   });
 });
