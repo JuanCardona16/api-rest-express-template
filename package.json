@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "swagger:ui": "swagger-ui-express -p 3001 -f swagger.json",
-    "swagger:json": "ts-node ./src/config/swagger.config.ts > swagger.json",
+    "swagger:json": "tsx ./src/config/swagger/printSpec.ts > swagger.json",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
