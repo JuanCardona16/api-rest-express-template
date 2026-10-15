@@ -218,3 +218,6 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/node,linux,macos,windows
 # Agent tooling local (no forma parte del template)
 .atl/
+
+# Especificacion OpenAPI generada por `pnpm swagger:json`
+swagger.json

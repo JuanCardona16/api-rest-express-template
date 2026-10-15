@@ -43,7 +43,8 @@ const options = {
   ],
 };
 
-const swaggerSpec = swaggerJsdoc(options);
+/** Especificación generada desde los bloques @swagger de las rutas. */
+export const swaggerSpec = swaggerJsdoc(options);
 
 /**
  * Setup Swagger UI for the Express application.
