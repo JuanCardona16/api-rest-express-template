@@ -1,40 +1,45 @@
-/**
- * DEUDA CONOCIDA: este servicio accede a mongoose a traves del modelo, no del
- * puerto IUserRepository. Es una violacion de la frontera de dependencias y lo
- * habitual es inyectar el repositorio por constructor. No se migra todavia
- * porque las rutas de Google estan comentadas y el servicio no tiene cobertura:
- * refactorizar codigo muerto sin pruebas agrega riesgo sin agregar valor.
- * Ver L11 en odd/tasks/architecture-and-toolchain.md.
- */
-import CustomApiResponses from '@/config/responses/CustomResponses';
-import { jwtHelpers } from '@/lib/Jwt';
+import CustomApiResponses, { ApiSuccessResponse } from '@/config/responses/CustomResponses';
 import { CLIENT_GOOGLE_ID, CLIENT_GOOGLE_SECRET } from '@/config/env/enviroments';
-import axios from 'axios';
 import { client } from '@/features/authentication/config/authGoogle.config';
-import UserModel from '@/infrastructure/mongoDb/Schemas/user/UserModel';
+import { IUserRepository } from '@/features/user/interfaces';
 import { AuthMethods } from '@/features/user/interfaces/user.types';
+import { CustomError } from '@/lib';
+import { jwtHelpers } from '@/lib/Jwt';
+import axios from 'axios';
 
+/**
+ * Autenticación con Google.
+ *
+ * El acceso a datos va por el puerto IUserRepository, igual que el login local.
+ * Antes importaba el modelo de mongoose directamente, lo que rompía la frontera
+ * de dependencias y hacía imposible probarlo sin una base de datos.
+ */
 class AuthenticationGoogleServices {
-  private verifyGoogle = async (id_token: string) => {
+  constructor(private readonly userRepository: IUserRepository) {}
+
+  private verifyGoogle = async (idToken: string) => {
     try {
       const ticket = await client.verifyIdToken({
-        idToken: id_token,
+        idToken,
         audience: CLIENT_GOOGLE_ID,
       });
 
       const payload = ticket.getPayload();
+
+      if (!payload?.email) throw new Error('El token de Google no trae email.');
+
       return {
-        email: payload?.email,
-        name: payload?.given_name,
-        lastname: payload?.family_name,
-        photo: payload?.picture,
+        email: payload.email,
+        name: payload.given_name,
+        lastname: payload.family_name,
+        photo: payload.picture,
       };
     } catch {
-      throw new Error('No se pudo verificar el token de Google.');
+      throw CustomError(401, 'Could not verify the Google token', 'INVALID_GOOGLE_TOKEN');
     }
   };
 
-  private exchangeCodeForTokens = async (code: string) => {
+  private exchangeCodeForTokens = async (code: string): Promise<string> => {
     try {
       const response = await axios.post('https://oauth2.googleapis.com/token', {
         code,
@@ -44,60 +49,44 @@ class AuthenticationGoogleServices {
         grant_type: 'authorization_code',
       });
 
-      if (!response.data.id_token) {
-        throw new Error('No se ha recibido id_token en la respuesta de Google.');
-      }
+      const idToken = response.data?.id_token;
 
-      return response.data.id_token;
+      if (!idToken) throw new Error('Google no devolvio id_token.');
+
+      return idToken;
     } catch {
-      throw new Error('No se pudo intercambiar el código por un token.');
+      throw CustomError(401, 'Google rejected the authorization code', 'INVALID_GOOGLE_CODE');
     }
   };
 
-  public autenticate = async (code: string) => {
-    try {
-      // Intercambiar código por un ID token
-      const id_token = await this.exchangeCodeForTokens(code);
+  public login = async (code: string): Promise<ApiSuccessResponse<string>> => {
+    const idToken = await this.exchangeCodeForTokens(code);
+    const userData = await this.verifyGoogle(idToken);
 
-      // Verificar el token
-      const userData = await this.verifyGoogle(id_token);
+    const user = await this.userRepository.getUserByEmail(userData.email);
 
-      const user = await UserModel.findOne({ email: userData.email });
-
-      // 🔥 Validar si el usuario ya existe con autenticación tradicional
-      if (user) {
-        if (user.authenticationMethod !== AuthMethods.GOOGLE) {
-          return CustomApiResponses.error(
-            'El correo ya está registrado con otro método de autenticación.',
-          );
-        }
-
-        // Si el usuario ya existe con Google, simplemente lo autenticamos
-        const token = jwtHelpers.generateToken<string>({ payload: user.uuid }, '1d');
-
-        return CustomApiResponses.success(token);
-      }
-
-      // 🔥 Si el usuario no existe, lo creamos con Google
-      const data = {
-        username: `${userData.name} ${userData.lastname}`,
-        email: userData.email,
-        password: 'p:', // Se generará una contraseña aleatoria
-        authenticationMethod: AuthMethods.GOOGLE,
-        isVerified: true,
-      };
-
-      const newUser = new UserModel(data);
-      await newUser.save();
-
-      // Generar token para el nuevo usuario
-      const token = jwtHelpers.generateToken<string>({ payload: newUser.uuid }, '1d');
-
-      return CustomApiResponses.success(token);
-    } catch {
-      return CustomApiResponses.error('Error en la autenticación con Google.');
+    // El email ya está con autenticación local: un atacante podría reutilizar su
+    // cuenta. Se rechaza en vez de devolver un token.
+    if (user && user.authenticationMethod !== AuthMethods.GOOGLE) {
+      throw CustomError(
+        409,
+        'This email is already registered with another authentication method',
+        'CONFLICT',
+      );
     }
+
+    const usuario =
+      user ??
+      (await this.userRepository.createUser({
+        username: `${userData.name ?? ''} ${userData.lastname ?? ''}`.trim() || 'google-user',
+        email: userData.email,
+        authenticationMethod: AuthMethods.GOOGLE,
+      } as Parameters<IUserRepository['createUser']>[0]));
+
+    const token = jwtHelpers.generateToken<string>({ payload: usuario.uuid }, '1d');
+
+    return CustomApiResponses.success(token);
   };
 }
 
-export default new AuthenticationGoogleServices();
+export default AuthenticationGoogleServices;

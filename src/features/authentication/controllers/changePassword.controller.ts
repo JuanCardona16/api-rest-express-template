@@ -1,43 +1,47 @@
-import { CustomError } from '@/lib';
-import { RequestHandler } from 'express';
+import { NODE_ENV, RESEND_KEY } from '@/config/env/enviroments';
+import { MailSender } from '@/features/authentication/interfaces';
 import ChangePasswordService from '@/features/authentication/services/changePassword.service';
-import CustomApiResponses from '@/config/responses/CustomResponses';
+import { MongoUserRepository } from '@/features/user/repository/mongoUserRepositories';
+import { ResendMailSender } from '@/infrastructure/mail/resendMailSender';
+import { Request } from 'express';
+
+const SIN_ENVIO: MailSender = { sendPasswordResetCode: async () => undefined };
+
+/**
+ * El email se pide siempre y se responde siempre igual. La UI usa la respuesta
+ * para avisar "te enviamos un código", no para saber si la cuenta existe.
+ *
+ * En test el envío es un no-op a propósito: las pruebas no deben salir a la red
+ * ni depender de que Resend esté disponible. El código se lee del helper.
+ */
+const construirServicio = (): ChangePasswordService => {
+  const mailSender: MailSender =
+    NODE_ENV === 'test' || !RESEND_KEY ? SIN_ENVIO : new ResendMailSender(RESEND_KEY);
+
+  return new ChangePasswordService(new MongoUserRepository(), mailSender);
+};
 
 class ChangePasswordController {
-  private key: string = '';
-
-  sendCode: RequestHandler = async (req, res, next) => {
+  sendCode = async (req: Request) => {
     const { email } = req.body as { email: string };
-    this.key = email;
 
-    if (!email) return next(CustomError(500, 'Internal Error server'));
-
-    await ChangePasswordService.sendCodeForEmail(email);
-
-    res.status(200).send(CustomApiResponses.success('Code sent successfully'));
+    return construirServicio().sendCodeForEmail(email);
   };
 
-  verifyCode: RequestHandler = async (req, res, next) => {
-    const { code } = req.body as { code: string };
+  verifyCode = async (req: Request) => {
+    const { email, code } = req.body as { email: string; code: string };
 
-    if (!code) return next(CustomError(500, 'Internal Error server'));
-
-    await ChangePasswordService.verifyCode(code);
-
-    res.status(200).send(CustomApiResponses.success('Code is verify correctly!'));
+    return construirServicio().verifyCode({ email, code });
   };
 
-  changePassword: RequestHandler = async (req, res, next) => {
-    const { password } = req.body as { password: string };
+  changePassword = async (req: Request) => {
+    const { email, token, newPassword } = req.body as {
+      email: string;
+      token: string;
+      newPassword: string;
+    };
 
-    if (!password) return next(CustomError(500, 'Internal Error server'));
-
-    const response = await ChangePasswordService.changePassword({
-      email: this.key,
-      newPassword: password,
-    });
-
-    res.status(200).send(response);
+    return construirServicio().changePassword({ email, token, newPassword });
   };
 }
 

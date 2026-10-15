@@ -1,10 +1,10 @@
-import { skipUnlessStackIsRunning } from '../shared/stack';
+import { initStackCheck } from '../shared/stack';
 
 /**
  * Punto de entrada de las pruebas de extremo a extremo.
  *
- * No hay nada que preparar aqui todavia: el estado vive en el contenedor, no en
- * este proceso. La verificacion de disponibilidad si ocurre, y delega en
- * `skipUnlessStackIsRunning` para no fingir cobertura cuando el stack no esta.
+ * Comprueba la disponibilidad del stack ANTES de que se recojan los tests, para
+ * que puedan declararse omitidos de verdad. Si la comprobación se hiciera dentro
+ * de cada test, la suite reportaría verde sin haber ejecutado nada.
  */
-export { skipUnlessStackIsRunning };
+await initStackCheck();

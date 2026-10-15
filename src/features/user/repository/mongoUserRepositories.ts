@@ -67,6 +67,18 @@ export class MongoUserRepository implements IUserRepository {
     }
   }
 
+  async updatePasswordByEmail(email: string, hashedPassword: string): Promise<User | null> {
+    try {
+      return await this.userModel
+        .findOneAndUpdate({ email }, { password: hashedPassword }, { new: true })
+        .select('-password -_id')
+        .lean()
+        .exec();
+    } catch {
+      throw CustomError(500, 'Internal server error');
+    }
+  }
+
   async deleteUser(uuid: string): Promise<User | null> {
     try {
       const deletedUser = await this.userModel
