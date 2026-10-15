@@ -1,102 +1,84 @@
 # AGENTS.md
 
-API REST con Node + Express + TypeScript. Arquitectura hexagonal sobre capas
-técnicas por feature.
+API REST con Node, Express y TypeScript.
 
 ## Entorno
 
-- **pnpm es el único gestor de dependencias.** `packageManager` está fijado en
-  `package.json`. No uses `npm` ni `npx`, ni propongas npm en documentación.
-- **Node `>=20 <26`** (`engines`). El repo trae `.mise.toml` y `.nvmrc` con Node 20.
-  Si los shims de mise no están activos en tu shell, prefixá los comandos:
-  `mise exec -- pnpm test:all`.
-- `allowBuilds` en `pnpm-workspace.yaml` es obligatorio: pnpm 11+ ignora
-  silenciosamente `onlyBuiltDependencies`. Sin `bcrypt: true` no se compila.
+- **pnpm es el único gestor de dependencias.** No uses `npm` ni `npx`, ni los
+  propongas en documentación.
+- **Node `>=20 <26`.** El repo fija Node 20 en `.mise.toml` y `.nvmrc`. Si los
+  shims de mise no están activos en tu shell, prefixá: `mise exec -- pnpm test`.
+- `allowBuilds` en `pnpm-workspace.yaml` es obligatorio. pnpm 11+ ignora
+  silenciosamente `onlyBuiltDependencies`; sin `bcrypt: true` no compila.
 
-## Verificación requerida antes de reportar una tarea completada
+## Verificación obligatoria antes de reportar completada una tarea
 
 ```bash
-mise exec -- pnpm lint        # debe dar 0 errores; los warnings de `any` son intencionales
-mise exec -- pnpm typecheck   # debe salir limpio
-mise exec -- pnpm test:all    # unit + integration + functional + e2e
+mise exec -- pnpm lint        # 0 errores. Los warnings de `any` son convención, no un fallo.
+mise exec -- pnpm typecheck
+mise exec -- pnpm test:all
 mise exec -- pnpm build
 ```
 
-Si tocaste Docker o contracts de API, sumá:
+Con cambios en Docker o en contratos de API, sumá:
 
 ```bash
-mise exec -- pnpm docker:up && mise exec -- pnpm test:e2e
+mise exec -- pnpm docker:test
 ```
 
-Para E2E subí `RATE_LIMIT_MAX` en `.env` (por ejemplo 1000): con el límite por
-defecto la suite se corta a sí misma con 429.
+Ese script levanta el stack y corre E2E. Necesita `RATE_LIMIT_MAX` alto en tu
+`.env` local sin versionar (por ejemplo `1000`): con el valor por defecto la
+suite se corta con 429 a mitad de camino.
 
-## Arquitectura
-
-```
-features/<feature>/
-├── interfaces/     # contratos y puertos
-├── schemas/        # validación Zod
-├── services/       # lógica de negocio
-├── controllers/    # HTTP
-└── routes/         # endpoints
-```
-
-Todo import usa el alias `@/`.
+Si un comando de Docker devuelve `permission denied ... docker.sock`, el shell
+no tiene el grupo `docker`. Es eso, no un comando roto: reabrió la sesión o
+envolvelo en `newgrp docker -c "..."`.
 
 ## SIEMPRE HACES
 
-- **Escribí el test antes** cuando cambies comportamiento existente, y mirá cómo
+- **Escribí la prueba antes** de cambiar comportamiento existente, y mirá cómo
   falla antes de implementar.
-- **Ubicá la prueba según su tipo**: regla pura → `test/unit/`; cableado HTTP o
-  mongoose → `test/integration/`; flujo completo → `test/functional/`; sistema
+- **Elegí el directorio según el tipo**: regla pura → `test/unit/`; cableado HTTP
+  o mongoose → `test/integration/`; flujo completo → `test/functional/`; sistema
   desplegado → `test/e2e/`.
-- **Validá el puerto en los servicios.** `IUserRepository` es un puerto:
-  los servicios lo reciben por constructor y lo prueban con el doble de
-  `test/shared/userRepositoryMock.ts`.
+- **Probá los servicios contra el puerto.** `IUserRepository` se inyecta por
+  constructor y se dobla con `test/shared/userRepositoryMock.ts`.
 - **Los controladores devuelven la respuesta; `asyncHandler` decide el status.**
-  Un controlador no llama `res.status()`.
-- **Un error de negocio se lanza con `CustomError(status, message, code)`**,
-  nunca se escribe una respuesta a mano.
-- **Una regla de validación tiene una sola definición.** La de contraseña vive en
-  `PasswordHelpers.validateCharacters`; la consultan Zod y el hook de Mongoose.
-- **Commits**: Conventional Commits (`feat|fix|docs|test|refactor|build|chore|style(scope):`).
-  Sin `Co-Authored-By` ni atribución de IA.
+- **Los errores de negocio se lanzan con `CustomError(status, message, code)`**,
+  nunca se responde a mano.
+- **Una regla de validación tiene una sola definición.** La de contraseña está en
+  `PasswordHelpers.validateCharacters`, y la consultan tanto Zod como el hook de
+  Mongoose. Si agregás una regla, agregala ahí y en ningún otro lado.
 
 ## PREGUNTA ANTES DE
 
-- Habilitar las rutas comentadas de cambio de contraseña y login de Google
-  (`features/authentication/routes/auth.route.ts`).
+- Habilitar las rutas comentadas de cambio de contraseña y login de Google en
+  `features/authentication/routes/auth.route.ts`.
 - Cambiar un código HTTP existente o la forma del JSON de respuesta.
 - Tocar `LICENSE`: dice MIT y `package.json` dice ISC. La decisión es del dueño.
-- Correr migrations o modificar el schema de la colección `users`.
+- Modificar el schema de la colección `users`.
 - Agregar una dependencia.
 - Cambiar el rango de Node.
 
 ## NUNCA HACES
 
-- **Nunca edites** `.env`, `dist/`, `swagger.json` (se genera con
-  `pnpm swagger:json`), `.atl/` ni `node_modules/`.
-- **Nunca edites** `src/features/user/repository/mongoUserRepositories.ts` para
-  cambiar lógica de negocio: ese archivo solo traduce. La lógica va en
-  `services/`.
-- **Nunca devuelvas `password` ni `password` hasheado** en una respuesta, ni
-  siquiera en listados. Hay tests que lo verifican.
-- **Nunca montes `GET /api/v1/health` después de `app.use(limiter)`** en
-  `src/core/app.ts`: comparte cuota con el tráfico real y el contenedor se
+- **No edites a mano** `swagger.json`: es un artefacto generado.
+- **No pongas lógica de negocio en** `features/user/repository/mongoUserRepositories.ts`.
+  Ese archivo traduce; la lógica vive en `services/`.
+- **No devuelvas `password`**, hasheado o no, en ninguna respuesta ni listado.
+- **No montes `GET /api/v1/health` después de `app.use(limiter)`** en
+  `src/core/app.ts`. Comparte cuota con el tráfico real y el contenedor se
   auto-limita.
-- **Nunca montes un handler suelto con `app.use(prefijo, handler)`**: responde a
-  todo lo que empiece por ese prefijo y se traga el ruteo.
-- **Nunca toques la cadena `users`**: `uuid`, `email` y `username` tienen
-  unicidad y validators en `User.schema.ts`.
-- **Nunca borres ni reescribas** `odd/tasks/*.md` sin autorización: son la
-  especificación de la remediación en curso, con historial.
-- **Nunca commitees secretos.** `.env` está ignorado y las imágenes llevan
-  `.dockerignore`.
+- **No montes un handler suelto con `app.use(prefijo, handler)`.** Responde a todo
+  lo que empiece por ese prefijo y se traga el ruteo.
+- **No cambies `uuid`, `email` ni `username`** en `User.schema.ts`: tienen
+  unicidad y validators.
+- **No borres ni reescribas** `odd/tasks/*.md`. Son la especificación de la
+  remediación en curso, con historial.
 
 ## Reporte de completitud
 
-```md
+```text
 ## Qué hice
 <qué cambió y por qué>
 
@@ -110,5 +92,5 @@ Todo import usa el alias `@/`.
 <item de riesgo o "ninguno">
 ```
 
-Si una verificación requerida falla, decilo en el reporte. No la saltees ni
-lo reportes como completada.
+Si una verificación obligatoria falla, va en el reporte. No la saltees ni la
+reportes como completada.
