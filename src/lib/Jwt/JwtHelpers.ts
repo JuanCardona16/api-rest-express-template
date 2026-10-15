@@ -25,7 +25,7 @@ export class JwtHelpers {
   verifyToken<T>(payload: string): Payload<T> | null {
     try {
       return jwt.verify(payload!, this.SECRET_KEY) as Payload<T>;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -33,7 +33,7 @@ export class JwtHelpers {
   verifyRefreshToken<T>(token: string): T | null {
     try {
       return jwt.verify(token, this.SECRET_REFRESH_KEY) as T;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -41,7 +41,7 @@ export class JwtHelpers {
   // Método para refrescar el access token usando un refresh token válido
   refreshAccessToken<T>(
     refreschAccessToken: string,
-    expiresIn: string | number = '1h'
+    expiresIn: string | number = '1h',
   ): string | null {
     const decode = this.verifyRefreshToken<Payload<T>>(refreschAccessToken);
 

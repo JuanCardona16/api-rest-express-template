@@ -4,7 +4,7 @@ export const GlobalHandleError: ErrorRequestHandler = (
   error: any,
   req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ) => {
   const statusCode: number = error.status || 500;
   const message: string = error.message || 'An error occurred';

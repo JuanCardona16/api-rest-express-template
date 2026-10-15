@@ -1,4 +1,3 @@
-import { DATABASE_URL } from '@/config/env/enviroments';
 import { setupSwagger } from '@/config/swagger/config';
 import { ApiPrefix } from '@/constants';
 import express, { Express } from 'express';

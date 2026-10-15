@@ -6,7 +6,7 @@ import { User } from '@/features/user/model/User.model';
 
 const UserModel = MongoHelpers.getDataCollectionModel<User>(
   CollectionsNamesMongo.USERS,
-  UserMongoSchema
+  UserMongoSchema,
 ) satisfies mongoose.Model<User>; // 👉 "Asegúrate de que esto cumple con el tipo Model<User> de Mongoose"
 
 export default UserModel;

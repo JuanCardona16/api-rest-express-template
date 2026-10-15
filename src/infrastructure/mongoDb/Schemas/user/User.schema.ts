@@ -42,7 +42,7 @@ const UserMongoSchema = new Schema<User>(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 UserMongoSchema.pre('save', async function (next) {
@@ -55,7 +55,12 @@ UserMongoSchema.pre('save', async function (next) {
   } else {
     // Validar la contraseña solo si el método de autenticación no es GOOGLE
     if (!PasswordHelpers.validateCharacters(this.password)) {
-      return next(CustomError(400, 'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character'));
+      return next(
+        CustomError(
+          400,
+          'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character',
+        ),
+      );
     }
   }
   this.password = PasswordHelpers.generateHashing(this.password, 12);

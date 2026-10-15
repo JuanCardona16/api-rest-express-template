@@ -13,7 +13,7 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const user = await this.userModel.findOne({ uuid }).select('-password -_id').lean().exec();
       return user;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }
@@ -22,7 +22,7 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const user = await this.userModel.findOne({ email }).select('-password -_id').lean().exec();
       return user;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }
@@ -31,7 +31,7 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const newUser = await this.userModel.create(user);
       return newUser;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }
@@ -44,7 +44,7 @@ export class MongoUserRepository implements IUserRepository {
         .lean()
         .exec();
       return updatedUser;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }
@@ -57,7 +57,7 @@ export class MongoUserRepository implements IUserRepository {
         .lean()
         .exec();
       return deletedUser;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }
@@ -66,7 +66,7 @@ export class MongoUserRepository implements IUserRepository {
     try {
       const users = await this.userModel.find().select('-password -_id').lean().exec();
       return users;
-    } catch (error) {
+    } catch {
       throw CustomError(500, 'Internal server error');
     }
   }

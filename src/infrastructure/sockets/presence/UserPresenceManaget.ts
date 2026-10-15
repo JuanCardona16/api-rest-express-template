@@ -50,7 +50,7 @@ export class UserPresenceManager {
    * Obtiene un array de todos los IDs de usuarios conectados
    * @returns Array de IDs de usuarios actualmente conectados
    */
-  public getUsersConnecteds(): String[] {
+  public getUsersConnecteds(): string[] {
     return Array.from(this.userConnected.keys());
   }
 

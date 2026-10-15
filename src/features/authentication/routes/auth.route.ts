@@ -1,8 +1,6 @@
 import { PublicRoutes } from '@/constants';
 import { Router } from 'express';
 import { authenticationController } from '@/features/authentication/modules/basic/controllers/auth.controller';
-import changePasswordController from '@/features/authentication/modules/change-password/controllers/changePassword.controller';
-import AuthenticationGoogleController from '@/features/authentication/modules/google/controllers/authGoogle.controller';
 import { asyncHandler } from '@/core/errors';
 import { validateWithZod } from '@/core/middleware/validate/validateWithZod';
 import { loginSchema, registerSchema } from '../modules/basic/schemas/auth.schemas';
@@ -41,7 +39,7 @@ const authenticationPaths: Router = Router();
 authenticationPaths.post(
   PublicRoutes.REGISTER,
   validateWithZod(registerSchema, 'body'),
-  asyncHandler(authenticationController.register)
+  asyncHandler(authenticationController.register),
 );
 
 /**
@@ -73,7 +71,7 @@ authenticationPaths.post(
 authenticationPaths.post(
   PublicRoutes.LOGIN,
   validateWithZod(loginSchema, 'body'),
-  asyncHandler(authenticationController.login)
+  asyncHandler(authenticationController.login),
 );
 
 // /**

@@ -21,7 +21,7 @@ class AuthenticationGoogleServices {
         lastname: payload?.family_name,
         photo: payload?.picture,
       };
-    } catch (error) {
+    } catch {
       throw new Error('No se pudo verificar el token de Google.');
     }
   };
@@ -41,7 +41,7 @@ class AuthenticationGoogleServices {
       }
 
       return response.data.id_token;
-    } catch (error) {
+    } catch {
       throw new Error('No se pudo intercambiar el código por un token.');
     }
   };
@@ -54,13 +54,13 @@ class AuthenticationGoogleServices {
       // Verificar el token
       const userData = await this.verifyGoogle(id_token);
 
-      let user = await UserModel.findOne({ email: userData.email });
+      const user = await UserModel.findOne({ email: userData.email });
 
       // 🔥 Validar si el usuario ya existe con autenticación tradicional
       if (user) {
         if (user.authenticationMethod !== AuthMethods.GOOGLE) {
           return CustomApiResponses.error(
-            'El correo ya está registrado con otro método de autenticación.'
+            'El correo ya está registrado con otro método de autenticación.',
           );
         }
 
@@ -71,7 +71,7 @@ class AuthenticationGoogleServices {
       }
 
       // 🔥 Si el usuario no existe, lo creamos con Google
-      let data = {
+      const data = {
         username: `${userData.name} ${userData.lastname}`,
         email: userData.email,
         password: 'p:', // Se generará una contraseña aleatoria
@@ -86,7 +86,7 @@ class AuthenticationGoogleServices {
       const token = jwtHelpers.generateToken<string>({ payload: newUser.uuid }, '1d');
 
       return CustomApiResponses.success(token);
-    } catch (error) {
+    } catch {
       return CustomApiResponses.error('Error en la autenticación con Google.');
     }
   };

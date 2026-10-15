@@ -13,7 +13,7 @@ export const authenticatedSocket = (socket: Socket, next: (err?: ExtendedError) 
     const decode = jwtHelpers.verifyToken(token);
     (socket as any).userId = decode?.payload;
     return next();
-  } catch (error) {
+  } catch {
     return next(new Error('Invalid token'));
   }
 };

@@ -61,7 +61,7 @@ export class SocketManager {
         console.log(`📨 Mensaje recibido de ${socket.userId}: ${message}`);
         this.presenceManager!.emitToUser(socket.userId, 'message', {
           userId: socket.userId,
-          message: "Mensaje recibido desde el servidor de Node.js y Express! 😀",
+          message: 'Mensaje recibido desde el servidor de Node.js y Express! 😀',
         });
       });
 
@@ -71,6 +71,6 @@ export class SocketManager {
           console.log(`🔌 Usuario desconectado: ${socket.userId}`);
         }
       });
-    })
+    });
   }
 }
