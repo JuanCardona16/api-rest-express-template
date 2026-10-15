@@ -76,6 +76,56 @@ envolvelo en `newgrp docker -c "..."`.
 - **No borres ni reescribas** `odd/tasks/*.md`. Son la especificación de la
   remediación en curso, con historial.
 
+## Git Workflow
+
+### Branch naming
+
+- Formato: `tipo/short-description` (ej: `feat/auth-oauth`, `fix/n1-user-list`)
+- Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `chore`, `style`
+
+### Commit format
+
+- Conventional Commits: `tipo(escopo): descripción`
+- Descripción en imperativo, sin punto final
+
+### PR rules
+
+- Un PR = una tarea de la spec (máx 200 líneas de diff, excluyendo generated)
+- No mezclar refactoring con feature (el refactor va en un PR previo)
+- No mezclar spec con implementación (la spec se mergea primero)
+
+### Risk lanes (obligatorio en cada PR)
+
+- **Green**: UI, docs, tests, refactors internos → 1 aprobador
+- **Yellow**: business logic, integraciones, jobs → 1 aprobador + failure paths
+- **Red**: auth, payments, PII, migrations, public APIs → 2 aprobadores + senior
+
+### PR template (usarlo siempre)
+
+Cada PR incluye:
+
+- **Tarea**: spec enlazada + tarea específica
+- **Risk lane**: Green / Yellow / Red
+- **Evidencia**: tests pasan, lint pasa, criterios de aceptación verificados
+- **Notas para el reviewer**: decisiones tomadas, edge cases cubiertos, y lo que
+  **no** se hizo y por qué
+
+### Gates (el PR se devuelve sin review si falta alguno)
+
+- Spec enlazada
+- Tests que cubren criterios de aceptación, no solo "los tests pasan"
+- Sin weakening de CI: nada de `skip`, `--force` ni silenciar lints
+- Sin secrets en código, fixtures ni logs
+- APIs reales: cada import, método y flag existe en la versión del repo
+- Respeta module boundaries y naming existentes
+
+### Prohibiciones
+
+- No abrir PRs WIP con código a medio hacer
+- No mezclar "el fix del bug que encontré en el camino" en el PR de la feature
+- No usar el PR como chat: las decisiones van a la spec o a Engram
+- No mergear sin leer el diff
+
 ## Reporte de completitud
 
 ```text
