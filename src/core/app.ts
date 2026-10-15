@@ -2,7 +2,6 @@ import { setupSwagger } from '@/config/swagger/config';
 import { ApiPrefix } from '@/constants';
 import express, { Express } from 'express';
 import helmet from 'helmet';
-import 'tsconfig-paths/register';
 import { CorsConfig, setHeaders } from '@/config';
 import { GlobalHandleError } from './errors';
 import limiter from './middleware/rateLimit/limiter';
