@@ -60,7 +60,9 @@ USER node
 EXPOSE 3000
 
 # El healthcheck no usa curl porque la imagen slim no lo trae: usa el propio Node.
+# Exige 200 exacto. Aceptar cualquier status valido dejaba pasar un 429, que
+# significa que la API se esta auto-limitando y ya no sirve a nadie.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/no-existe').then(r=>process.exit(r.status>0?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]
