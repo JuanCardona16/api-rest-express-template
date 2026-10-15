@@ -1,4 +1,4 @@
-import { jwtHelpers } from '@/core/security/security';
+import { jwtHelpers } from '@/lib/Jwt';
 import { CustomError } from '@/lib';
 import { RequestHandler } from 'express';
 

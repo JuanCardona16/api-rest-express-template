@@ -1,10 +1,18 @@
+/**
+ * DEUDA CONOCIDA: este servicio accede a mongoose a traves del modelo, no del
+ * puerto IUserRepository. Es una violacion de la frontera de dependencias y lo
+ * habitual es inyectar el repositorio por constructor. No se migra todavia
+ * porque las rutas de Google estan comentadas y el servicio no tiene cobertura:
+ * refactorizar codigo muerto sin pruebas agrega riesgo sin agregar valor.
+ * Ver L11 en odd/tasks/architecture-and-toolchain.md.
+ */
 import CustomApiResponses from '@/config/responses/CustomResponses';
-import { jwtHelpers } from '@/core/security/security';
+import { jwtHelpers } from '@/lib/Jwt';
 import { CLIENT_GOOGLE_ID, CLIENT_GOOGLE_SECRET } from '@/config/env/enviroments';
 import axios from 'axios';
-import { client } from '../config/AuthGoogleConfig';
+import { client } from '@/features/authentication/config/authGoogle.config';
 import UserModel from '@/infrastructure/mongoDb/Schemas/user/UserModel';
-import { AuthMethods } from '@/features/user/model/User.model';
+import { AuthMethods } from '@/features/user/interfaces/user.types';
 
 class AuthenticationGoogleServices {
   private verifyGoogle = async (id_token: string) => {

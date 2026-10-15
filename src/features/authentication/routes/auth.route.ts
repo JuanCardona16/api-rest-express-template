@@ -1,9 +1,9 @@
 import { PublicRoutes } from '@/constants';
 import { Router } from 'express';
-import { authenticationController } from '@/features/authentication/modules/basic/controllers/auth.controller';
+import { authenticationController } from '@/features/authentication/controllers/auth.controller';
 import { asyncHandler } from '@/core/errors';
 import { validateWithZod } from '@/core/middleware/validate/validateWithZod';
-import { loginSchema, registerSchema } from '../modules/basic/schemas/auth.schemas';
+import { loginSchema, registerSchema } from '@/features/authentication/schemas/auth.schemas';
 
 const authenticationPaths: Router = Router();
 

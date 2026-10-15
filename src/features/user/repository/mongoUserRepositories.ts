@@ -1,9 +1,9 @@
 import UserModel from '@/infrastructure/mongoDb/Schemas/user/UserModel';
 import { CustomError } from '@/lib';
 import { Model } from 'mongoose';
-import { IUserRepository } from '../interfaces/IUserRepository';
-import { RegisterRequestData } from '@/features/authentication/modules/basic/types';
-import { User } from '../model/User.model';
+import { IUserRepository } from '@/features/user/interfaces';
+import { RegisterRequestData } from '@/features/authentication/interfaces';
+import { User } from '@/features/user/interfaces';
 
 // El Repository solo retorna datos, el Service maneja la lógica
 export class MongoUserRepository implements IUserRepository {

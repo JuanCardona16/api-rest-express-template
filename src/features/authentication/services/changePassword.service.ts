@@ -1,6 +1,11 @@
+/**
+ * DEUDA CONOCIDA: este servicio escribe contra el modelo de mongoose en lugar
+ * de pasar por IUserRepository. Se corrige cuando se expongan las rutas y el
+ * servicio tenga cobertura. Ver L11 en odd/tasks/architecture-and-toolchain.md.
+ */
 import { Resend } from 'resend';
-import InMemoryCodeSecurity from '../helpers/CodeSecurity/InMemoryCideService';
-import PasswordHelpers from '../../../../../lib/Passwords/PasswordHelpers';
+import InMemoryCodeSecurity from '@/features/authentication/helpers/InMemoryCodeSecurityService';
+import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
 import CustomApiResponses from '@/config/responses/CustomResponses';
 import { RESEND_KEY } from '@/config/env/enviroments';
 import UserModel from '@/infrastructure/mongoDb/Schemas/user/UserModel';

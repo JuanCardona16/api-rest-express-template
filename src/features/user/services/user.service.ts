@@ -1,7 +1,7 @@
 import CustomResponses, { ApiResponses } from '@/config/responses/CustomResponses';
 import { CustomError } from '@/lib';
-import { IUserRepository } from '../interfaces/IUserRepository';
-import { User } from '../model/User.model';
+import { IUserRepository } from '@/features/user/interfaces';
+import { User } from '@/features/user/interfaces';
 
 class UserServices {
   constructor(private readonly userRepository: IUserRepository) {}

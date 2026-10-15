@@ -15,7 +15,7 @@ export const asyncHandler =
     // La cadena se devuelve: sin este return el middleware resolvia antes de que
     // `.catch(next)` corriera y los errores nunca llegaban al manejador global.
     Promise.resolve(fn(req, res, next))
-      .then((result) => {
+      .then((result): void => {
         // Si ya enviaste la respuesta en el controlador, no hacer nada
         if (res.headersSent) {
           return;
@@ -23,7 +23,8 @@ export const asyncHandler =
 
         // Si el resultado es tu ApiResponses personalizado
         if (result && typeof result === 'object' && 'success' in result) {
-          return res.status(200).json(result);
+          res.status(200).json(result);
+          return;
         }
 
         // Para resultados simples

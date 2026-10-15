@@ -1,4 +1,4 @@
-import { AuthMethods } from '@/features/user/model/User.model';
+import { AuthMethods } from '@/features/user/interfaces/user.types';
 
 export type LoginRequestData = {
   email: string;

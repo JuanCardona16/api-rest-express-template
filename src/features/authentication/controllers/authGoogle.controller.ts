@@ -1,6 +1,6 @@
 import { CustomError } from '@/lib';
 import { NextFunction, Request, Response } from 'express';
-import AuthenticationGoogleServices from '@/features/authentication/modules/google/services/AuthGoogle.service';
+import AuthenticationGoogleServices from '@/features/authentication/services/authGoogle.service';
 
 class AuthenticationGoogleController {
   async login(req: Request, res: Response, next: NextFunction) {
