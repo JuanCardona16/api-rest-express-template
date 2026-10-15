@@ -11,7 +11,9 @@ type AsyncRequestHandler = (
 // que en este caso será el manejador de errores global.
 export const asyncHandler =
   (fn: AsyncRequestHandler): RequestHandler =>
-  (req: Request, res: Response, next: NextFunction) => {
+  (req: Request, res: Response, next: NextFunction) =>
+    // La cadena se devuelve: sin este return el middleware resolvia antes de que
+    // `.catch(next)` corriera y los errores nunca llegaban al manejador global.
     Promise.resolve(fn(req, res, next))
       .then((result) => {
         // Si ya enviaste la respuesta en el controlador, no hacer nada
@@ -32,4 +34,3 @@ export const asyncHandler =
         });
       })
       .catch(next); // Si hay un error, lo pasa al siguiente middleware de error
-  };
