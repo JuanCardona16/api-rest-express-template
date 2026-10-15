@@ -1,214 +1,208 @@
-# Documentación del Proyecto
+# API REST Express Template
 
-Este documento tiene como objetivo proporcionar una visión general de la arquitectura, los patrones de diseño, la estructura del proyecto y la documentación de los endpoints de la API.
+Plantilla de API REST con Node.js, Express y TypeScript, organizada en capas técnicas sobre una frontera hexagonal: el dominio no depende de la infraestructura, la infraestructura se conecta a través de contratos.
 
-## 1. Arquitectura del Proyecto
+- **Autenticación** por JWT (acceso y refresco), con registro en bcrypt y login local.
+- **MongoDB** con Mongoose, detrás del puerto `IUserRepository`.
+- **WebSockets** con Socket.IO, autenticados y con gestión de presencia.
+- **Fronteras verificables**: los servicios se prueban contra los puertos, sin base de datos.
+- **Suite de pruebas** en cuatro tipos, con Vitest.
+- **Build** con tsup a un único artefacto ESM.
+- **Docker** multi-etapa con `docker compose`.
 
-El proyecto sigue una arquitectura modular y en capas, diseñada para promover la separación de responsabilidades, la escalabilidad y la mantenibilidad. Se basa en el patrón **Clean Architecture** o **Arquitectura Hexagonal** (Ports and Adapters), donde el dominio del negocio es el centro y las capas externas (infraestructura, UI) se adaptan a él.
+---
 
-## Capas Principales:
+## 1. Requisitos
 
-- **`src/core`**: Contiene la lógica central de la aplicación, como la configuración de Express, el manejo global de errores, middlewares generales y la configuración de rutas principales.
-- **`src/features`**: Aquí se encuentran los módulos de negocio de la aplicación. Cada "feature" (característica) es un módulo independiente que encapsula su propia lógica de negocio, controladores, servicios, repositorios, interfaces y esquemas. Ejemplos: `authentication`, `user`.
-- **`src/infrastructure`**: Contiene las implementaciones de los "adaptadores" que interactúan con servicios externos, como bases de datos (MongoDB) y sistemas de caché (Redis).
-- **`src/lib`**: Incluye utilidades y librerías compartidas que no pertenecen directamente a una característica o a la infraestructura, como manejadores de errores personalizados, helpers para JWT y manejo de contraseñas.
-- **`src/config`**: Almacena la configuración de la aplicación, como CORS, variables de entorno, cabeceras de respuesta y configuración de Swagger.
-- **`src/constants`**: Define constantes globales utilizadas en toda la aplicación, como prefijos de API y rutas.
-
-### Sistema de capas por funcionalidad
-
-#### Capa de Contratos (#1)
-
-En esta capa encontraremos todos los contratos de entrada y salida de los servicios. Como tipos e interfaces utilizadas en esa funcionalidad. Esto nos ayudara a tener una mejor estructura y escalabilidad en nuestra aplicacion.
-
-#### Capa de Acceso a Datos (#2)
-
-La capa de Acceso a Datos es responsable de:
-
-- Gestionar todas las operaciones de base de datos
-- Transformar datos entre el formato de base de datos y objetos de dominio
-- No contiene lógica de negocio
-
-Esta capa actúa como una abstracción entre la base de datos y el resto de la aplicación, asegurando una clara separación de responsabilidades.
-
-#### Capa de Servicios (Logica de Negocio) (#3)
-
-La capa de Servicios es responsable de:
-
-- Implementar reglas de negocio
-- Validaciones complejas
-- Coordinacion entre multiples repositorios
-- No contiene lógica de acceso a datos
-- Transformaciones de datos para la logica de negocio
-
-Esta capa es responsable de implementar toda la lógica de negocio compleja. Se encarga de orquestar las operaciones entre las diferentes capas, aplicar las reglas de negocio específicas del dominio, realizar transformaciones de datos necesarias, y coordinar el flujo de información utilizando los servicios proporcionados por otras capas. Actúa como un intermediario inteligente que garantiza que todas las operaciones cumplan con los requisitos y reglas establecidas por el negocio.
-
-#### Capa de Controladores (Manejo de HTTP) (#4)
-
-La capa de Controladores es responsable de:
-
-- Manejar requests y responses HTTP
-- Validar los datos de entrada básicos
-- Transformar datos entre HTTP y objetos de dominio
-- Manejar códigos de estado HTTP
-- No contiene lógica de negocio
-
-Esta capa es responsable de recibir las peticiones HTTP, validar los datos de entrada, invocar los servicios correspondientes, transformar los datos de salida y devolver las respuestas HTTP. Es el punto de entrada y salida de la aplicación para las peticiones HTTP.
-
-#### Capa de Rutas
-
-La capa de Rutas es responsable de:
-
-- Definir endpoints HTTP
-- Asociar endpoints con métodos del controlador
-- Aplicar middlewares específicos de ruta (si es necesario)
-
-Esta capa es responsable de definir las rutas de la API y asignar las peticiones HTTP a los controladores correspondientes. Es el punto de entrada para las peticiones HTTP y se encarga de enrutar las peticiones a los controladores adecuados.
-
-## 2. Patrones de Diseño Implementados
-
-- **Separación de Responsabilidades (SRP)**: Cada módulo y capa tiene una única responsabilidad bien definida.
-- **Inversión de Dependencias (DIP)**: Las capas de alto nivel (lógica de negocio) no dependen de las capas de bajo nivel (infraestructura). En su lugar, ambas dependen de abstracciones (interfaces). Esto se observa en el uso de interfaces de repositorio en la capa de `features` y su implementación en la capa de `infrastructure`.
-- **Middleware Pattern**: Utilizado extensivamente en Express para manejar solicitudes HTTP, validación, autenticación y manejo de errores.
-- **Singleton Pattern**: Posiblemente utilizado para la conexión a la base de datos o para instancias de servicios que solo necesitan una única instancia global.
-- **Repository Pattern**: Abstrae la lógica de acceso a datos, permitiendo que la capa de negocio interactúe con los datos sin conocer los detalles de la base de datos subyacente.
-
-## 3. Estructura del Proyecto
-
-```
-api-rest-express-template/
-├── .env.example
-├── esbuild.config.ts
-├── package.json
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── src/
-│   ├── config/             # Configuración de la aplicación (CORS, Env, Headers, Swagger)
-│   ├── constants/          # Constantes globales (rutas, etc.)
-│   ├── core/               # Lógica central de la aplicación (Express, errores, middleware, rutas principales)
-│   │   ├── app.ts          # Configuración principal de Express
-│   │   ├── index.ts        # Archivo de inicio de la aplicación
-│   │   ├── errors/         # Manejo global de errores
-│   │   ├── middleware/     # Middlewares generales (autenticación, rate limit, validación)
-│   │   └── routes/         # Rutas principales y manejo de rutas no encontradas
-│   ├── features/           # Módulos de negocio (Authentication, User)
-│   │   ├── authentication/ # Módulo de autenticación
-│   │   │   ├── modules/    # Lógica específica de autenticación (basic, jwt)
-│   │   │   └── routes/     # Rutas de autenticación
-│   │   └── user/           # Módulo de usuario
-│   │       ├── controller/ # Controladores de usuario
-│   │       ├── interfaces/ # Interfaces de usuario
-│   │       ├── model/      # Modelos de usuario (Mongoose)
-│   │       ├── repository/ # Implementaciones de repositorios de usuario
-│   │       ├── routes/     # Rutas de usuario
-│   │       ├── schemas/    # Esquemas de validación (Zod)
-│   │       └── services/   # Lógica de negocio de usuario
-│   ├── infrastructure/     # Implementaciones de adaptadores (MongoDB, Redis)
-│   │   ├── mongoDb/        # Conexión y modelos de MongoDB
-│   │   └── redis/          # Configuración de Redis
-│   └── lib/                # Utilidades y librerías compartidas (Custom Errors, JWT, Passwords)
-│       ├── HandlerCustomErrors/ # Manejo de errores personalizados
-│       ├── Jwt/            # Helpers para JWT
-│       └── Passwords/      # Helpers para manejo de contraseñas
-└── tsconfig.json
-```
-
-## 4. Documentación de Endpoints (Swagger)
-
-La API está documentada utilizando Swagger/OpenAPI. Puedes acceder a la documentación interactiva de los endpoints en la siguiente ruta (una vez que la aplicación esté corriendo):
-
-`http://localhost:[PUERTO]/api/v1/docs`
-
-(Reemplaza `[PUERTO]` con el puerto en el que se ejecuta tu aplicación, generalmente definido en las variables de entorno).
-
-La configuración de Swagger se encuentra en <mcfile name="config.ts" path="src/config/swagger/config.ts"></mcfile> y se inicializa en <mcfile name="app.ts" path="src/core/app.ts"></mcfile>.
-
-## 5. Tecnologías Utilizadas
-
-Este proyecto ha sido construido utilizando las siguientes tecnologías y herramientas clave:
-
--   **Lenguaje:** TypeScript 5.x+
--   **Entorno de Ejecución:** Node.js 18.x+
--   **Framework Web:** Express.js 4.x
--   **Base de Datos:** MongoDB
--   **ODM (Object Data Modeling):** Mongoose 8.x
--   **Autenticación:** JSON Web Tokens (JWT) con `jsonwebtoken` y `bcryptjs` para hashing de contraseñas.
--   **Validación de Datos:** Zod para validación de esquemas de entrada y Mongoose Schemas para validación a nivel de base de datos.
--   **Seguridad:** `helmet` para cabeceras de seguridad, `express-rate-limit` para prevención de ataques de fuerza bruta, y `cors` para manejo de políticas de origen cruzado.
--   **Variables de Entorno:** `dotenv` para la gestión de configuraciones sensibles.
--   **Documentación API:** Swagger/OpenAPI con `swagger-ui-express` y `swagger-jsdoc`.
--   **Linting y Formateo:** ESLint y Prettier para mantener la consistencia y calidad del código.
--   **Gestor de Paquetes:** pnpm (aunque también es compatible con npm).
-
-## 6. Características Principales
-
--   **🚀 Framework Robusto:** Construido sobre Express.js, un framework web rápido y minimalista para Node.js.
--   **🔒 Tipado Estático Avanzado:** Utiliza TypeScript para proporcionar un tipado estático completo, lo que mejora la detección de errores en tiempo de desarrollo, la refactorización y la mantenibilidad del código.
--   **🔑 Autenticación Segura:** Implementa un sistema de autenticación basado en JSON Web Tokens (JWT), con tokens almacenados de forma segura en cookies `HttpOnly` y `Secure` para proteger contra ataques XSS.
--   **🛡️ Seguridad Integral:** Incluye medidas de seguridad como el hashing de contraseñas con `bcrypt`, validación de entrada robusta con `Zod`, configuración de cabeceras HTTP seguras con `helmet`, y prevención básica de ataques de fuerza bruta mediante `express-rate-limit`.
--   **💾 Gestión de Datos Eficiente:** Integración con MongoDB a través de Mongoose, un potente ODM que facilita el modelado de datos, la validación de esquemas y la interacción simplificada con la base de datos.
--   **✅ Validación de Datos Exhaustiva:** Valida los esquemas de los cuerpos de solicitud, parámetros y consultas utilizando Zod, complementando las validaciones a nivel de base de datos de Mongoose.
--   **🚦 Arquitectura Modular y Escalable:** Estructura organizada por capas (rutas, controladores, servicios, modelos Mongoose) y por características (`features`), lo que facilita la escalabilidad, la separación de responsabilidades y la mantenibilidad del código.
--   **⚙️ Configuración Centralizada:** Manejo de variables de entorno con `dotenv` para una configuración flexible y segura de la aplicación.
--   **🚨 Manejo Global de Errores:** Un middleware centralizado para capturar y manejar errores de forma consistente en toda la aplicación, proporcionando respuestas estandarizadas.
--   **🧪 Testing Integrado:** Configuración lista para pruebas unitarias y de integración utilizando Jest, asegurando la calidad y el correcto funcionamiento de la lógica de negocio.
--   **📄 Documentación API Automática:** Generación automática de documentación API interactiva con Swagger/OpenAPI, facilitando el consumo y la comprensión de los endpoints.
--   **💅 Calidad de Código:** ESLint y Prettier preconfigurados para asegurar la consistencia del estilo de código y adherencia a las mejores prácticas.
-
-## 7. Configuración Inicial
-
-Para poner en marcha este proyecto en tu entorno local, sigue los siguientes pasos:
-
-### 1. Clonar el Repositorio
+| Herramienta | Versión | Nota |
+| --- | --- | --- |
+| Node.js | `>=20 <26` | Declarado en `engines`. Ver la nota de abajo. |
+| pnpm | 12.x | **Único** gestor de dependencias soportado. |
+| Docker | 24+ | Opcional, solo para el stack completo. |
 
 ```bash
-git clone https://github.com/tu-usuario/api-rest-express-template.git
-cd api-rest-express-template
-```
-
-### 2. Instalar Dependencias
-```bash
+corepack enable   # activa pnpm desde el packageManager del package.json
 pnpm install
-# o
-npm install
 ```
 
-### 3. Configurar Variables de Entorno
-Crea un archivo `.env` en la raíz del proyecto y configura las variables de entorno necesarias. Puedes utilizar el archivo `.env.example` como referencia.
+> **Por qué el rango de Node está acotado.** `jsonwebtoken` depende de `jwa`, que a su vez usa `buffer-equal-constant-time`, y ese paquete lee `buffer.SlowBuffer`. Node 26 eliminó esa propiedad, así que en Node 26 el import falla en tiempo de ejecución sin ningún aviso. Si actualizás Node, actualizá también `jwa` y probá el arranque antes de desplegar.
+
+## 2. Arranque rápido
+
+### Desarrollo
 
 ```bash
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/your_database_name
-JWT_SECRET=your_super_secret_jwt_key
-JWT_EXPIRES_IN=1d
-NODE_ENV=development
+cp .env.example .env      # completá los secretos
+pnpm dev                  # recarga en caliente
 ```
 
-### 4. Ejecutar la Aplicación
-
-Modo Desarrollo
-
-Para ejecutar la aplicación en modo desarrollo (con recarga en caliente):
+### Con Docker
 
 ```bash
-pnpm dev
-# o
-npm run dev
+pnpm docker:up            # API + MongoDB + Redis
+pnpm test:e2e             # pruebas contra el stack desplegado
+pnpm docker:down          # parar
 ```
 
-Modo Producción
+> **Para correr los E2E, subí `RATE_LIMIT_MAX` en tu `.env`** (por ejemplo `1000`). Con el límite por defecto la suite se corta a sí misma con `429` a mitad de camino, y el fallo parece un defecto de la API cuando es un límiteConfigured correctamente.
 
-Para construir y ejecutar la aplicación en modo producción:
+## 3. Arquitectura
+
+El proyecto sigue una **arquitectura hexagonal**: el dominio define qué necesita, la infraestructura decide cómo se resuelve.
+
+```
+src/
+├── core/                # Express, middlewares, manejo global de errores, rutas raíz
+├── features/            # Módulos de negocio, uno por feature
+├── infrastructure/      # Adaptadores: MongoDB, WebSockets
+├── lib/                 # Utilidades compartidas: errores, JWT, contraseñas
+├── config/              # Configuración: env, CORS, headers, Swagger, respuestas
+└── constants/           # Prefijos y rutas
+```
+
+### Capas técnicas por feature
+
+Toda feature sigue la misma estructura:
+
+```
+features/<feature>/
+├── interfaces/     # #1 Contratos: tipos de dominio y puertos de datos
+├── schemas/        # Esquemas de validación con Zod
+├── services/       # #3 Lógica de negocio
+├── controllers/    # #4 Manejo de HTTP
+└── routes/         # Endpoints
+```
+
+**La regla que sostiene la arquitectura:** las capas altas dependen de interfaces, nunca de implementaciones. Un servicio importa `IUserRepository`, no el modelo de Mongoose. Las implementaciones viven en `infrastructure/` o en `repository/` y se inyectan por constructor.
+
+Esa regla es verificable: el doble de prueba `test/shared/userRepositoryMock.ts` implementa el puerto. Si un servicio empieza a importar Mongoose directo, el doble deja de alcanzar y los tests lo delatan.
+
+## 4. Contrato de respuestas
+
+Un solo tipo gobierna el éxito y el error. Ambos incluyen el status, y `asyncHandler` lo usa para responder.
+
+```jsonc
+// Éxito
+{ "success": true, "data": {}, "status": 200, "timestamp": "2026-01-01T00:00:00.000Z" }
+
+// Error
+{ "success": false, "error": { "message": "...", "code": "NOT_FOUND" },
+  "status": 404, "timestamp": "2026-01-01T00:00:00.000Z" }
+```
+
+Los controladores **devuelven** la respuesta; el middleware decide el código HTTP. Para crear un recurso: `CustomApiResponses.success(data, 201)`. Para responder sin cuerpo: `CustomApiResponses.noContent()`.
+
+## 5. Autenticación
+
+Los tokens se devuelven **en el cuerpo de la respuesta JSON**, no en cookies. No hay cookies HTTP `HttpOnly` en esta implementación.
+
+```http
+POST /api/v1/auth/register
+{ "username": "juan", "email": "juan@example.com", "password": "Password1!" }
+```
+
+Las rutas privadas exigen `Authorization: Bearer <token>`.
+
+## 6. Pruebas
+
+Cuatro tipos, cuatro directorios en `test/`. Cada tipo tiene su comando:
 
 ```bash
-pnpm build
-pnpm start
-# o
-npm run build
-npm start
+pnpm test:unit          # reglas puras, sin IO. El más rápido.
+pnpm test:integration   # app real + mongod real en memoria.
+pnpm test:functional    # flujos completos de punta a punta.
+pnpm test:e2e           # contra el stack de Docker, por HTTP.
+pnpm test:all
 ```
 
-## 8. Licencia
-Este proyecto está bajo la licencia MIT. Consulta el archivo LICENSE en la raíz del repositorio para más detalles.
+| Directorio | Qué prueba | Dependencias |
+| --- | --- | --- |
+| `test/unit/` | Reglas de negocio contra los puertos | Ninguna |
+| `test/integration/` | Cableado HTTP, middlewares, mongoose | `mongodb-memory-server` |
+| `test/functional/` | Flujos completos de cada caso de uso | `mongodb-memory-server` |
+| `test/e2e/` | El sistema desplegado, como un cliente más | Docker |
+| `test/shared/` | Dobles de prueba y configuración | — |
 
-© 2025 Juan David Cardona - API Rest Express Template. Todos los derechos reservados.
+`test/e2e` **se omite con un aviso** cuando no hay stack escuchando. No simula un éxito: un E2E verde sin haber probado nada es peor que uno ausente.
+
+### Contrato de contraseñas
+
+La regla de contraseña válida está definida en **un solo lugar**, `PasswordHelpers.validateCharacters`, y la consultan tanto el schema de Zod como el hook de Mongoose. El login no la aplica: una contraseña incorrecta responde `403`, no `400`.
+
+## 7. Variables de entorno
+
+| Variable | Requerida | Descripción |
+| --- | --- | --- |
+| `PORT` | No | Puerto del servidor. Por defecto `3000`. |
+| `NODE_ENV` | No | `development`, `test` o `production`. |
+| `DATABASE_URL` | **Sí** | Cadena de conexión a MongoDB. |
+| `TOKEN_SECRET_KEY` | **Sí** | Secreto de los tokens de acceso. |
+| `REFESCH_TOKEN_SECRET_KEY` | **Sí** | Secreto de los tokens de refresco. |
+| `RESEND_KEY` | No | Servicio de email. |
+| `CLIENT_GOOGLE_ID` | No | OAuth de Google. |
+| `CLIENT_GOOGLE_SECRET` | No | OAuth de Google. |
+| `SOCKET_CORS_ORIGIN` | No | Orígenes permitidos en WebSocket, separados por coma. |
+| `RATE_LIMIT_MAX` | No | Máximo de solicitudes por ventana. Por defecto `10`. |
+| `RATE_LIMIT_WINDOW_MS` | No | Ventana del límite. Por defecto 15 minutos. |
+
+En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites no se corten con `429`.
+
+## 8. Sonda de salud
+
+`GET /api/v1/health` responde el estado del proceso y de la conexión a la base de datos.
+
+```json
+{ "success": true, "data": { "status": "ok", "uptime": 128, "database": "connected" },
+  "status": 200, "timestamp": "..." }
+```
+
+Está montada **antes** del limitador de velocidad, a propósito: si compartiera cuota con el tráfico real, el healthcheck del contenedor consumiría el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
+
+Cuando la base no está conectada la respuesta sigue siendo `200` con `status: "degraded"`. Un healthcheck que muere con la base provoca reinicios en cascada; una degradación visible es preferible a eso.
+
+## 9. Documentación de la API
+
+Swagger se documenta con anotaciones JSDoc en los archivos de rutas.
+
+| Qué | Dónde | Cuándo |
+| --- | --- | --- |
+| Interfaz Swagger | `/api-docs` | Solo con `NODE_ENV=development` |
+| Especificación OpenAPI | `/swagger.json` | Siempre, **incluido producción** |
+
+## 10. Docker
+
+`Dockerfile` en cuatro etapas: dependencias, build con tsup, dependencias de producción y runtime.
+
+- **`node:20-slim`, no alpine.** bcrypt solo distribuye binarios precompilados para glibc; en alpine hay que instalar un toolchain de C++ y compilar en cada build.
+- **Usuario no root** en la imagen final.
+- **Healthcheck** que consulta una ruta que responde `404` a propósito: verifica que Express acepta peticiones, no que la aplicación sea correcta.
+
+tsup deja las dependencias fuera del bundle, así que el artefacto necesita un `node_modules` de producción al lado. La imagen lo resuelve con una etapa dedicada de `pnpm install --prod`.
+
+## 11. Convenciones de código
+
+ESLint 9 con configuración plana (`eslint.config.js`) y Prettier como regla de ESLint, de modo que `.prettierrc` es la única fuente de formato.
+
+```bash
+pnpm lint        # 0 errores
+pnpm lint:fix
+pnpm typecheck
+```
+
+Todo import usa el alias `@/`. Los argumentos sin usar se prefijan con `_`.
+
+## 12. Deuda conocida
+
+Documentada a propósito, no resuelta:
+
+- **Rutas comentadas.** Los endpoints de cambio de contraseña y login de Google están implementados pero comentados en `features/authentication/routes/auth.route.ts`. Sus servicios acceden a Mongoose saltándose el repositorio.
+- **Email duplicado responde `500`.** El índice único de Mongo lanza dentro del repositorio, que mapea todo error a 500. Debería ser `409`.
+- **Login enumera usuarios.** Un email inexistente da `404` y uno existente con contraseña incorrecta da `403`, lo que confirma si una cuenta está registrada.
+- **La conexión a Mongo no se espera.** `core/index.ts` empieza a escuchar antes de confirmar la base de datos.
+- **CORS loguea en producción.** `corsConfig.ts` tiene `console.log` en cada request y `console.error` por origen rechazado, con un comentario que dice "solo para desarrollo" pero sin la condición que lo haga cierto. La lista de orígenes además es fija en el código y no incluye el puerto por defecto.
+- **`ioredis` y `cookie-parser`** siguen declarados y sin usar.
+- **La licencia está contradicha.** `LICENSE` dice MIT y `package.json` dice ISC.
+
+## 13. Licencia
+
+**Hay una contradicción que resolver.** El archivo `LICENSE` contiene la licencia MIT y el `package.json` declara `"license": "ISC"`. Mismo proyecto, dos licencias distintas. Nadie debería publicar sin decidir cuál es la real.

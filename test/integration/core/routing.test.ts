@@ -47,3 +47,25 @@ describe('enrutado de la API', () => {
     expect(response.headers['x-powered-by']).toBeUndefined();
   });
 });
+
+describe('sonda de salud', () => {
+  it('responde 200 y queda fuera del limitador de velocidad', async () => {
+    const respuestas = await Promise.all(
+      Array.from({ length: 40 }, () => request(app).get('/api/v1/health')),
+    );
+
+    // Si compartiera cuota con el trafico real, alguna de estas caeria en 429 y el
+    // contenedor se auto-limitaria con su propio healthcheck.
+    expect(respuestas.every((r) => r.status === 200)).toBe(true);
+    expect(respuestas[0].body.success).toBe(true);
+    expect(respuestas[0].body.data).toHaveProperty('status');
+    expect(respuestas[0].body.data).toHaveProperty('uptime');
+  });
+
+  it('informa el estado de la base de datos como dato, sin morir por ello', async () => {
+    const respuesta = await request(app).get('/api/v1/health');
+
+    expect(respuesta.status).toBe(200);
+    expect(['ok', 'degraded']).toContain(respuesta.body.data.status);
+  });
+});

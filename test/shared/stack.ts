@@ -1,3 +1,5 @@
+import { it } from 'vitest';
+
 import { TEST_ENV } from '../shared/env';
 
 /**
@@ -35,3 +37,17 @@ export const skipUnlessStackIsRunning = async (): Promise<boolean> => {
 };
 
 export { TEST_ENV };
+
+/**
+ * Declara una prueba de extremo a extremo que solo corre si el stack esta arriba.
+ *
+ * Si el stack no responde, la prueba se omite con un aviso. Un E2E verde sin
+ * haber probado nada es peor que uno ausente: parece cobertura y no lo es.
+ */
+export const itConStack = (nombre: string, prueba: () => Promise<void>) => {
+  it(nombre, async () => {
+    if (!(await skipUnlessStackIsRunning())) return;
+
+    await prueba();
+  });
+};

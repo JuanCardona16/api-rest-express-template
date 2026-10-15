@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { CorsConfig, setHeaders } from '@/config';
 import { GlobalHandleError } from './errors';
 import limiter from './middleware/rateLimit/limiter';
+import health, { HealthRoute } from '@/core/routes/health';
 import { handleNotFound } from './routes';
 import routerApplication from './routes/router';
 
@@ -24,6 +25,14 @@ export const createApp = (): Express => {
 
   app.use(express.json());
   app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+  // Sonda de salud ANTES del limitador: si compartiera cuota con el tráfico
+  // real, el healthcheck del contenedor consumiría el cupo y la API se
+  // auto-limitaría a 429 sin que nadie lo pidiera.
+  // Ruta exacta, no `app.use(ApiPrefix, ...)`: montado así el handler respondería
+  // 200 a todo lo que empiece por /api/v1 y se tragaría el resto de las rutas.
+  app.get(`${ApiPrefix}${HealthRoute.PATH}`, health);
+
   app.use(limiter); // Aplicar el limitador de velocidad a todas las solicitudes
 
   // Configura Swagger entre los primeros middlewares

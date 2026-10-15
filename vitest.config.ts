@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import { TEST_ENV } from './test/shared/env';
+import { TEST_ENV } from './test/shared/env.ts';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
