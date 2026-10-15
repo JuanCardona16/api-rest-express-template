@@ -57,7 +57,7 @@ export const setupSwagger = (app: Application): void => {
       swaggerUi.setup(swaggerSpec, {
         customCss: '.swagger-ui .topbar { display: none }',
         customSiteTitle: 'API Rest With Node.js And Express',
-      })
+      }),
     );
   }
 

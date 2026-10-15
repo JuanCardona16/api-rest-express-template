@@ -11,7 +11,7 @@ class AuthenticationGoogleController {
     const response = await AuthenticationGoogleServices.autenticate(code);
 
     res.status(200).send(response);
-  };
+  }
 }
 
 export default new AuthenticationGoogleController();

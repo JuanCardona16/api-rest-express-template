@@ -6,18 +6,24 @@
     "dev": "tsx watch src/core/index.ts",
     "build": "tsx esbuild.config.ts",
     "start": "node dist/index.js",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "swagger:ui": "swagger-ui-express -p 3001 -f swagger.json",
-    "swagger:json": "ts-node ./src/config/swagger.config.ts > swagger.json"
+    "swagger:json": "ts-node ./src/config/swagger.config.ts > swagger.json",
+    "format:check": "prettier --check ."
   },
   "keywords": [],
   "author": "Juan David Cardona Bageth",
   "license": "ISC",
   "type": "module",
   "description": "Sistema de authentication para react con nodejs",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=20 <26"
+  },
   "devDependencies": {
+    "@eslint/js": "^9.25.0",
     "@types/bcrypt": "5.0.2",
     "@types/cookie-parser": "1.4.8",
     "@types/cors": "2.8.17",
@@ -34,12 +40,14 @@
     "eslint": "^9.25.0",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prettier": "^5.2.6",
+    "globals": "^17.13.0",
     "nodemon": "3.1.9",
     "prettier": "^3.5.3",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "tsx": "^4.19.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "typescript-eslint": "^8.71.2"
   },
   "dependencies": {
     "axios": "^1.7.9",

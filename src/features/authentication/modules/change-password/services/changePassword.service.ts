@@ -25,7 +25,7 @@ class ChangePasswordService {
         subject: 'Cambio de Contraseña',
         html: `<p>Este es tu codigo para recuperar tu contraseña <strong>${code}</strong>. Espira en 5 minutos.</p>`,
       });
-    } catch (error) {
+    } catch {
       return CustomApiResponses.error('Error al enviar el codigo de verificacion');
     }
   };
@@ -46,7 +46,7 @@ class ChangePasswordService {
     await UserModel.findOneAndUpdate(
       { email: data.email },
       { password: hashedPassword },
-      { new: true }
+      { new: true },
     );
 
     return CustomApiResponses.success('Contraseña actualizada correctamente!');

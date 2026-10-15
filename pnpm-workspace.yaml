@@ -1,4 +1,6 @@
-onlyBuiltDependencies:
-  - '@scarf/scarf'
-  - bcrypt
-  - esbuild
+# pnpm 11+ reemplaza onlyBuiltDependencies por allowBuilds.
+# Los settings anteriores se ignoran silenciosamente si se dejan en su lugar.
+allowBuilds:
+  bcrypt: true
+  esbuild: true
+  '@scarf/scarf': false
