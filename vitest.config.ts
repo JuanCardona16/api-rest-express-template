@@ -1,5 +1,13 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import { TEST_ENV } from './test/shared/env';
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+
+// El alias @/ de tsconfig.json, declarado de forma explicita: no depender de la
+// resolucion nativa de paths, que no esta disponible en todas las versiones de Vite.
+const alias = { '@': path.resolve(projectRoot, 'src') };
 
 /**
  * Cuatro tipos de test, cuatro proyectos.
@@ -13,9 +21,8 @@ import { TEST_ENV } from './test/shared/env';
  * Cada tipo tiene su directorio propio en `test/`, segun S2.
  */
 export default defineConfig({
-  // El alias @/ sale de los paths del tsconfig, resuelto nativamente por Vite.
   resolve: {
-    tsconfigPaths: true,
+    alias,
   },
   test: {
     projects: [
@@ -24,6 +31,9 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           env: TEST_ENV,
+          // El alias @/ sale de los paths del tsconfig. Hay que declararlo en cada
+          // project: las opciones de `resolve` no se heredan desde la raiz.
+          resolve: { tsconfigPaths: true },
           root: '.',
           include: ['test/unit/**/*.test.ts'],
         },
@@ -33,6 +43,9 @@ export default defineConfig({
           name: 'integration',
           environment: 'node',
           env: TEST_ENV,
+          // El alias @/ sale de los paths del tsconfig. Hay que declararlo en cada
+          // project: las opciones de `resolve` no se heredan desde la raiz.
+          resolve: { tsconfigPaths: true },
           root: '.',
           include: ['test/integration/**/*.test.ts'],
           setupFiles: ['test/setup/integration.setup.ts'],
@@ -47,6 +60,9 @@ export default defineConfig({
           name: 'functional',
           environment: 'node',
           env: TEST_ENV,
+          // El alias @/ sale de los paths del tsconfig. Hay que declararlo en cada
+          // project: las opciones de `resolve` no se heredan desde la raiz.
+          resolve: { tsconfigPaths: true },
           root: '.',
           include: ['test/functional/**/*.test.ts'],
           setupFiles: ['test/setup/functional.setup.ts'],
@@ -60,6 +76,9 @@ export default defineConfig({
           name: 'e2e',
           environment: 'node',
           env: TEST_ENV,
+          // El alias @/ sale de los paths del tsconfig. Hay que declararlo en cada
+          // project: las opciones de `resolve` no se heredan desde la raiz.
+          resolve: { tsconfigPaths: true },
           root: '.',
           include: ['test/e2e/**/*.test.ts'],
           setupFiles: ['test/setup/e2e.setup.ts'],
