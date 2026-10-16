@@ -224,10 +224,8 @@ resultado de `CorsConfig()`, que no tienen nombre que preservar.
 
 ### L10 — 2026-10-16, pendientes que son decisiones del usuario
 
-1. **"Extremo a extremo" no es un check requerido.** Corre en el PR (S2), pero
-   mientras no se agregue a la protección de `main`, un PR puede mergearse
-   igual con el E2E en rojo. Cerrar el hueco de S2 de verdad es una decisión de
-   política del repositorio.
+1. ~~**"Extremo a extremo" no es un check requerido.**~~ **Resuelto en L12:** ya
+   es check requerido en `main`.
 2. **Modelo de cuota.** El límite sigue siendo global por IP. Un límite más
    estricto en `/auth/login` sería lo natural contra credential stuffing, pero
    cambia el comportamiento observable de una ruta y no se hizo sin consultar.
@@ -267,3 +265,25 @@ cache en las trazas. No es una razón para dar por buena la telemetría.
 
 Pendiente si se quiere cerrar: habilitar `diag` del SDK en un entorno controlado
 y ver si el módulo `ioredis` aparece entre los hookeados.
+
+### L12 — 2026-10-16, "Extremo a extremo" queda como check requerido en `main`
+
+Con S2 el job ya corría en pull requests, pero seguía sin bloquear el merge: un
+PR podía mergearse con el E2E en rojo. Cerrado agregando el check a la
+protección de `main`.
+
+Estado de la protección después del cambio, verificado contra la API:
+
+- checks requeridos: `Lint y tipos`, `Pruebas (unit)`, `Pruebas (integration)`,
+  `Pruebas (functional)`, `Build`, `Imagen Docker`, **`Extremo a extremo`**
+- `strict: true`, sin revisiones requeridas, `required_conversation_resolution`
+  en true, `enforce_admins` en false, sin force pushes ni borrados.
+
+El check se agregó antes de pushear la rama, y hay una ventana en la que esto no
+verifica nada: `main` todavía tiene el `if: github.ref == 'refs/heads/main'`
+del workflow viejo, así que en un PR el job no corre y reporta `skipped`. El gate
+empieza a ser real cuando este PR mergee y el workflow sin el `if` llegue a
+`main`. La protección queda puesta para ese momento.
+
+Costo: el job levanta el stack completo y construye la imagen. Cada PR paga
+esos minutos. Es el precio de no mergear a ciegas.
