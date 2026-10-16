@@ -4,9 +4,13 @@ import { IUserRepository } from '@/features/user/interfaces';
 import { CustomError } from '@/lib';
 import PasswordHelpers from '@/lib/Passwords/PasswordHelpers';
 import { LoginRequestData, RegisterRequestData } from '@/features/authentication/interfaces';
+import passwordVerificationCache from '@/features/authentication/services/passwordVerificationCache';
 
 class AuthenticationServices {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(
+    private readonly userRepository: IUserRepository,
+    private readonly verificationCache = passwordVerificationCache,
+  ) {}
 
   async register(requestData: RegisterRequestData): Promise<ApiSuccessResponse<string>> {
     if (!requestData) throw CustomError(400, 'Bad Request');
@@ -36,8 +40,21 @@ class AuthenticationServices {
 
     if (!user) throw credencialesInvalidas();
 
-    if (!PasswordHelpers.compare(requestData.password, user.password))
+    // Cache del resultado de la comparacion, no de la sesion: `authorize` solo
+    // verifica la firma del JWT, asi que bcrypt solo corre en este endpoint. Un
+    // login repetido dentro de la ventana evita el hasheo. Si el hash de la base
+    // no coincide con lo cacheado, la contrasena cambio y se hashea igual.
+    const yaVerificado = await this.verificationCache.wasRecentlyVerified(
+      user.uuid,
+      requestData.password,
+      user.password,
+    );
+
+    if (!yaVerificado && !(await PasswordHelpers.compare(requestData.password, user.password)))
       throw credencialesInvalidas();
+
+    if (!yaVerificado)
+      await this.verificationCache.remember(user.uuid, requestData.password, user.password);
 
     const token = jwtHelpers.generateToken<string>({ payload: user.uuid }, '2d');
 

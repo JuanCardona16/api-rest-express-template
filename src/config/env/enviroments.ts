@@ -22,3 +22,15 @@ export const SOCKET_CORS_ORIGIN = process.env.SOCKET_CORS_ORIGIN || `http://loca
 // Limite de solicitudes. En test se desactiva para que las suites no choquen con 429.
 export const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 10);
 export const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+
+// Cache de verificacion de contrasena.
+// REDIS_ENABLED apaga el cache por completo. El cache nunca es una dependencia:
+// si Redis no responde, el login sigue hasheando.
+export const REDIS_ENABLED = process.env.REDIS_ENABLED
+  ? process.env.REDIS_ENABLED !== 'false'
+  : NODE_ENV !== 'test';
+export const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+// Ventana en la que una contrasena ya verificada no se vuelve a hashear.
+// Es una ventana de riesgo para la revocacion: mientras vive, un cambio de
+// contrasena no se refleja. Por defecto 30s.
+export const PASSWORD_CACHE_TTL_SECONDS = Number(process.env.PASSWORD_CACHE_TTL_SECONDS || 30);

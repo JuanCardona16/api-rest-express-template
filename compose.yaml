@@ -49,6 +49,11 @@ services:
       CLIENT_GOOGLE_ID: '${CLIENT_GOOGLE_ID:-}'
       CLIENT_GOOGLE_SECRET: '${CLIENT_GOOGLE_SECRET:-}'
       RATE_LIMIT_MAX: '${RATE_LIMIT_MAX:-100}'
+      # Cache de verificacion de contrasena. REDIS_ENABLED=false apaga el cache
+      # y la API sigue funcionando: el cache nunca es una dependencia dura.
+      REDIS_ENABLED: '${REDIS_ENABLED:-true}'
+      REDIS_URL: '${REDIS_URL:-redis://redis:6379}'
+      PASSWORD_CACHE_TTL_SECONDS: '${PASSWORD_CACHE_TTL_SECONDS:-30}'
     depends_on:
       mongo:
         condition: service_healthy

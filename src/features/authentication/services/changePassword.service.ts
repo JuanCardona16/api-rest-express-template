@@ -73,7 +73,7 @@ class ChangePasswordService {
       throw CustomError(401, 'Invalid or expired reset token', 'INVALID_RESET_TOKEN');
     }
 
-    const hashedPassword = PasswordHelpers.generateHashing(newPassword, 12);
+    const hashedPassword = await PasswordHelpers.generateHashing(newPassword, 12);
 
     const actualizado = await this.userRepository.updatePasswordByEmail(email, hashedPassword);
 

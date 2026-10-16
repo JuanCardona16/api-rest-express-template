@@ -1,8 +1,15 @@
 import bcrypt from 'bcrypt';
 
+/**
+ * `hash` y `compare` asincronos a proposito: bcrypt en modo bloqueante
+ * (`hashSync`, `compareSync`) ejecuta en el hilo principal de Node y congela el
+ * event loop durante toda la operacion. Medido con carga concurrente, un solo
+ * login detenia la API entera: las lecturas pagaban los ~180ms del login de
+ * otro. Las variantes asincronas delegan en libuvio y liberan el hilo.
+ */
 class PasswordHelpers {
-  public compare(passwordInRequest: string, passwordInDatabase: string | any): boolean {
-    return bcrypt.compareSync(passwordInRequest, passwordInDatabase);
+  public compare(passwordInRequest: string, passwordInDatabase: string | any): Promise<boolean> {
+    return bcrypt.compare(passwordInRequest, passwordInDatabase);
   }
 
   public validateCharacters(password: string): boolean {
@@ -10,8 +17,8 @@ class PasswordHelpers {
     return regexKey.test(password);
   }
 
-  public generateHashing(password: string, hasheoLength: number): string {
-    return bcrypt.hashSync(password, hasheoLength);
+  public generateHashing(password: string, hasheoLength: number): Promise<string> {
+    return bcrypt.hash(password, hasheoLength);
   }
 
   public generateSecurePassword = (username: string): string => {
