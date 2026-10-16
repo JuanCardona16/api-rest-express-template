@@ -10,6 +10,11 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: authentication-system
+    # mongod calcula la caché de WiredTiger a partir de la RAM de la MAQUINA, no
+    # del límite del contenedor. Sin acotarla, un contenedor con tope de 2 GiB
+    # intenta reservar gigas y se lo come entero. 1 GiB es suficiente para este
+    # volumen y deja aire para el resto del proceso.
+    command: ['mongod', '--wiredTigerCacheSizeGB', '1']
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -18,6 +23,11 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
 
   redis:
     image: redis:7-alpine
@@ -28,6 +38,11 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   api:
     build:
@@ -77,6 +92,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 768M
 
   nginx:
     image: nginx:1.27-alpine
@@ -94,6 +114,12 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 128M
+
 
 volumes:
   mongo-data:
