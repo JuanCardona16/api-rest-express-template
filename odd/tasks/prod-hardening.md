@@ -233,3 +233,37 @@ resultado de `CorsConfig()`, que no tienen nombre que preservar.
    cambia el comportamiento observable de una ruta y no se hizo sin consultar.
 3. **`TRUST_PROXY` en despliegues reales.** `compose.yaml` lo pone en `1`. Otro
    despliegue con su propio balanceador tiene que fijarlo a mano.
+
+### L11 — 2026-10-16, revisión de pendientes: ioredis no emite spans
+
+Pendiente de L2 que se pudo cerrar: la instrumentación de ioredis **no está
+produciendo spans**. No es que no se haya probado.
+
+Medición: se registró un usuario, se hizo login (cache miss) y un segundo login
+(cache hit), ambos `200`. En el collector, desde el último arranque, solo
+aparecen `@opentelemetry/instrumentation-express`, `http` y `mongodb`. Cero
+scopes de ioredis, cero operaciones redis.
+
+Descartado hasta acá:
+
+- **No está deshabilitada.** `@opentelemetry/instrumentation-ioredis` está en el
+  `InstrumentationMap` de `auto-instrumentations-node` sin config, o sea que entra
+  activa por default.
+- **No es el rango de versiones.** La instrumentación declara `['>=2.0.0 <7']` y
+  la instalada es 0.71.0 contra ioredis 6.0.0.
+- **No falta el método que parchea.** El patch envuelve
+  `moduleExports.prototype.sendCommand` y `prototype.connect`, y en ioredis 6 los
+  dos existen en el prototipo.
+
+Queda una hipótesis abierta: que el hook de módulo no llegue a dispararse para el
+`import` ESM de un CJS en este grafo, aunque sí funcione para `express` y
+`mongodb`. No se investigó más porque requiere tocar el código para habilitar el
+`diag` del SDK dentro del contenedor.
+
+**Impacto real: bajo.** Redis solo participa en el cache de verificación de
+contraseña, que ya se corrigió con sus propias pruebas y cuyo efecto en
+latencia se midió aparte. Lo que se pierde es visibilidad de los `get`/`set` del
+cache en las trazas. No es una razón para dar por buena la telemetría.
+
+Pendiente si se quiere cerrar: habilitar `diag` del SDK en un entorno controlado
+y ver si el módulo `ioredis` aparece entre los hookeados.
