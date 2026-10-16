@@ -73,6 +73,13 @@ services:
       REDIS_ENABLED: '${REDIS_ENABLED:-true}'
       REDIS_URL: '${REDIS_URL:-redis://redis:6379}'
       PASSWORD_CACHE_TTL_SECONDS: '${PASSWORD_CACHE_TTL_SECONDS:-30}'
+      # Telemetría. Apagada por defecto en la app (ver register.ts); acá se
+      # enciende porque el collector es parte del stack.
+      # La telemetría nunca es dependencia dura: si el collector cae, los
+      # exportadores reintentan y pierden datos, la API sigue sirviendo.
+      OTEL_ENABLED: '${OTEL_ENABLED:-true}'
+      OTEL_SERVICE_NAME: '${OTEL_SERVICE_NAME:-api-rest-express-template}'
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://telemetry:4318'
     depends_on:
       mongo:
         condition: service_healthy
@@ -120,6 +127,20 @@ services:
           cpus: '1.0'
           memory: 128M
 
+  # Receptor de la telemetria de la API. Solo escribe en su propio log con el
+  # exportador `debug`, y eso alcanza para probar que la instrumentacion anda.
+  # No expone puertos porque nadie deberia consumirlo desde fuera de la red.
+  telemetry:
+    image: otel/opentelemetry-collector:0.162.0
+    restart: unless-stopped
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   mongo-data:

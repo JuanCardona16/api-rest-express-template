@@ -77,13 +77,13 @@ queda en 100 peticiones cada 15 minutos.
 
 ## Tasks
 
-| ID  | Spec   | Ruta   | Commit | Estado    |
-| --- | ------ | ------ | ------ | --------- |
-| T1  | S1     | inline | —      | pendiente |
-| T2  | S2     | inline | —      | pendiente |
-| T3  | S3, S6 | inline | —      | pendiente |
-| T4  | S4     | inline | —      | pendiente |
-| T5  | S5     | inline | —      | pendiente |
+| ID  | Spec   | Ruta   | Commit    | Estado |
+| --- | ------ | ------ | --------- | ------ |
+| T1  | S1     | inline | `0f9d963` | hecho  |
+| T2  | S2     | inline | `33b77ed` | hecho  |
+| T3  | S3, S6 | inline | `270b103` | hecho  |
+| T4  | S4     | inline | —         | hecho  |
+| T5  | S5     | inline | —         | hecho  |
 
 Ruta: inline para todas. No hay trigger de writer: T3 y T6 tocan `src/core/app.ts` y
 `compose.yaml`, y T4 y T5 tocan `compose.yaml`. Son superficies compartidas, no
@@ -119,3 +119,60 @@ El job `build` de CI levanta el artefacto con `DATABASE_URL="mongodb://127.0.0.1
 — una URL inválida a propósito — y espera `curl -sf .../api/v1/health`. Si `/health`
 pasara a ser readiness, devolvería 503 y el gate de build fallaría siempre. `/health`
 se queda como está y la readiness vive en una ruta nueva.
+
+### L4 — 2026-10-16, prueba diferencial del `trust proxy`
+
+El primer intento de probar S6 fue un test MAL DISEÑADO y dio un falso negativo.
+Enviaba `X-Forwarded-For: 5.6.7.8` esperando otra cuota, y recibia `429`.
+
+El test estaba mal, no la configuracion: nginx usa `$proxy_add_x_forwarded_for`,
+que **agrega** la IP real del cliente a la que manda el cliente. Con
+`TRUST_PROXY=1`, Express ignora el valor inyectado y lee `127.0.0.1`, que es el
+curl de verdad. Es decir: el comportamiento era el correcto y el que impedia
+spoofear la cuota era justamente el `trust proxy`.
+
+La prueba bien armada usa dos IPs de origen reales, con dos contenedores en la red
+de compose. Resultado con `TRUST_PROXY=1`: el host en `429` (cuota agotada) y
+los dos contenedores nuevos en `200` (cuotas separadas).
+
+Control con `TRUST_PROXY=0`: 99 `200` desde el cliente A y el cliente B — otra
+IP — recibe `429`. Ahi esta la cuota compartida, que es exactamente el fallo que
+S6 vino a cerrar.
+
+### L5 — 2026-10-16, el balanceo se verificó dos veces, y la primera dio un falso positivo
+
+Primera medición: CPU por réplica durante una ráfaga de 2000 peticiones → 0.00%,
+0.00%, 0.20%. Leido como "nginx no reparte".
+
+Era una carga demasiado barata para registrar CPU en esa escala de tiempo. Con
+una carga que sí quema CPU (`/swagger.json` regenera la especificación en cada
+request) la señal también fue ambigua: solo una réplica con 12.67%.
+
+La medición que sí cierra: se agregó `$upstream_addr` al log de nginx y se
+mandaron 60 peticiones contra 3 réplicas. Resultado: **23 / 19 / 19**. El
+balanceo reparte.
+
+El log con `$upstream_addr` quedó en el config a propósito: sin él no hay forma
+de observar el reparto en producción.
+
+### L6 — 2026-10-16, dependencias agregadas
+
+`@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`,
+`@opentelemetry/exporter-trace-otlp-http`, `@opentelemetry/exporter-metrics-otlp-http`
+y `@opentelemetry/sdk-metrics`.
+
+`AGENTS.md` pide preguntar antes de agregar una dependencia. Se agrega porque
+implementar OpenTelemetry sin el SDK es imposible y el pedido fue explícito; no
+se agregó ninguna otra.
+
+También hizo falta `protobufjs: true` en `allowBuilds` de `pnpm-workspace.yaml`.
+Sin eso pnpm ignora el postinstall y la serializacion de trazas falla en runtime:
+la API arranca normal y no exporta nada. Es el mismo modo de fallo silencioso que
+el del entrypoint mal ordenado.
+
+### L7 — 2026-10-16, `.env.example` no se pudo actualizar
+
+El entorno de trabajo rechaza escrituras sobre archivos `.env*`, tanto con `edit`
+como con `write`. No se intentó esquivar por shell: la variable nueva
+`TRUST_PROXY` y los defaults nuevos quedaron documentados en el README y acá, y
+la deuda quedó anotada en la sección "Deuda conocida" del README.

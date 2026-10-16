@@ -91,9 +91,13 @@ jobs:
         # Compilar no alcanza: un bundle puede compilar y morir al ejecutarse.
         # Se levanta con una URL de base de datos invalida a proposito, para
         # comprobar que resuelve imports y llega a la conexion.
+        #
+        # Usa el comando real de arranque, con el `--import` del SDK de
+        # telemetria. Probar `node dist/index.js` probaria una ruta que nadie
+        # ejecuta: si el `--import` quedara mal, este gate seguiria en verde.
         run: |
           DATABASE_URL="mongodb://127.0.0.1:59999/nada" PORT=3999 \
-            node dist/index.js & sleep 5; \
+            node --import ./dist/telemetry.js dist/index.js & sleep 5; \
             curl -sf http://localhost:3999/api/v1/health && echo "OK"
 
   imagen:

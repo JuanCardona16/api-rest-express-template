@@ -1,0 +1,38 @@
+# Collector de OpenTelemetry del stack local.
+#
+# Recibe trazas y metricas por OTLP y las escribe en su propio log con el
+# exportador `debug`. Es el minimo que hace falta para PROBAR que la API really
+# exporta: si aparecen spans aca, la instrumentacion esta funcionando.
+#
+# Para verlos en una interfaz, cambiar el exportador de `traces` por el backend
+# real (Jaeger, Tempo, Grafana Cloud, Datadog) y apuntar
+# OTEL_EXPORTER_OTLP_ENDPOINT ahi. Eso es configuracion, no codigo.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    # `normal` imprime nombre, trace id y atributos de cada span. `basic` solo
+    # deja un resumen ("spans: 44"), que sirve para confirmar que algo llega pero
+    # no para ver qué instrumentó qué. Para el detalle completo: `detailed`.
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
