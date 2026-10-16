@@ -131,21 +131,49 @@ La regla de contraseña válida está definida en **un solo lugar**, `PasswordHe
 
 ## 7. Variables de entorno
 
-| Variable                   | Requerida | Descripción                                           |
-| -------------------------- | --------- | ----------------------------------------------------- |
-| `PORT`                     | No        | Puerto del servidor. Por defecto `3000`.              |
-| `NODE_ENV`                 | No        | `development`, `test` o `production`.                 |
-| `DATABASE_URL`             | **Sí**    | Cadena de conexión a MongoDB.                         |
-| `TOKEN_SECRET_KEY`         | **Sí**    | Secreto de los tokens de acceso.                      |
-| `REFESCH_TOKEN_SECRET_KEY` | **Sí**    | Secreto de los tokens de refresco.                    |
-| `RESEND_KEY`               | No        | Servicio de email.                                    |
-| `CLIENT_GOOGLE_ID`         | No        | OAuth de Google.                                      |
-| `CLIENT_GOOGLE_SECRET`     | No        | OAuth de Google.                                      |
-| `SOCKET_CORS_ORIGIN`       | No        | Orígenes permitidos en WebSocket, separados por coma. |
-| `RATE_LIMIT_MAX`           | No        | Máximo de solicitudes por ventana. Por defecto `10`.  |
-| `RATE_LIMIT_WINDOW_MS`     | No        | Ventana del límite. Por defecto 15 minutos.           |
+| Variable                     | Requerida | Descripción                                           |
+| ---------------------------- | --------- | ----------------------------------------------------- |
+| `PORT`                       | No        | Puerto del servidor. Por defecto `3000`.              |
+| `NODE_ENV`                   | No        | `development`, `test` o `production`.                 |
+| `DATABASE_URL`               | **Sí**    | Cadena de conexión a MongoDB.                         |
+| `TOKEN_SECRET_KEY`           | **Sí**    | Secreto de los tokens de acceso.                      |
+| `REFESCH_TOKEN_SECRET_KEY`   | **Sí**    | Secreto de los tokens de refresco.                    |
+| `RESEND_KEY`                 | No        | Servicio de email.                                    |
+| `CLIENT_GOOGLE_ID`           | No        | OAuth de Google.                                      |
+| `CLIENT_GOOGLE_SECRET`       | No        | OAuth de Google.                                      |
+| `SOCKET_CORS_ORIGIN`         | No        | Orígenes permitidos en WebSocket, separados por coma. |
+| `RATE_LIMIT_MAX`             | No        | Máximo de solicitudes **por IP** por ventana. `300`.  |
+| `RATE_LIMIT_WINDOW_MS`       | No        | Ventana del límite. Por defecto 15 minutos.           |
+| `TRUST_PROXY`                | No        | Saltos de proxy en los que confiar. `0` por defecto.  |
+| `REDIS_ENABLED`              | No        | Cache de verificación de contraseña. `true`.          |
+| `PASSWORD_CACHE_TTL_SECONDS` | No        | Vida del resultado cacheado. `30`.                    |
 
 En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites no se corten con `429`.
+
+### El límite es por IP, y eso tiene consecuencias
+
+`RATE_LIMIT_MAX` cuenta **por IP**, no por usuario ni global. Medido con el
+valor anterior de `100` sobre 996 usuarios virtuales: 523 878 peticiones, de las
+cuales **497 788 salieron rechazadas con `429`**. Un cliente, o una oficina
+entera detrás de una NAT, queda con 100 peticiones cada 15 minutos.
+
+`TRUST_PROXY` es lo que hace que ese número signifique algo detrás de un proxy:
+
+- Con `TRUST_PROXY=1` y un solo nginx delante, Express lee la IP real del cliente.
+- Con `0` y la API detrás de nginx, `req.ip` es la IP de nginx y **toda la cuota
+  de la API es una sola cuota compartida por todos los usuarios**.
+- Confiar en toda la cadena es peor: cualquiera puede mandar `X-Forwarded-For` y
+  rotar su propia cuota.
+
+Con la API expuesta directamente a internet, el valor correcto es `0`. Cualquier
+valor que no sea un entero no negativo cae a `0` a propósito: un `NaN` en
+`trust proxy` hace que Express confíe en toda la cadena.
+
+`compose.yaml` pone `TRUST_PROXY=1` porque ahí hay exactamente un nginx delante.
+
+> **Nota**: `.env.example` no se pudo actualizar en este cambio porque el
+> entorno de trabajo bloquea la escritura sobre archivos `.env*`. Las variables
+> nuevas están documentadas acá y en `odd/tasks/prod-hardening.md`.
 
 ## 8. Sondas de salud
 

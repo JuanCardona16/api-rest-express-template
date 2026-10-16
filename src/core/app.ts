@@ -3,11 +3,24 @@ import { ApiPrefix } from '@/constants';
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import { CorsConfig, setHeaders } from '@/config';
+import { TRUST_PROXY } from '@/config/env/enviroments';
 import { GlobalHandleError } from './errors';
 import limiter from './middleware/rateLimit/limiter';
 import health, { live, ready, HealthRoute } from '@/core/routes/health';
 import { handleNotFound } from './routes';
 import routerApplication from './routes/router';
+
+/** Ajustes de construccion de la app, inyectables para las pruebas. */
+export interface AppOptions {
+  /**
+   * Saltos de proxy en los que confiar, sobre el valor de `TRUST_PROXY`.
+   *
+   * Tiene que fijarse ANTES del limitador de velocidad, porque el limite agrupa
+   * por `req.ip`: sin confianza en el proxy, toda la cuota de la API es una sola
+   * cuota compartida.
+   */
+  trustProxy?: number;
+}
 
 /**
  * Construye la instancia de Express sin conectar ningun servicio externo.
@@ -15,8 +28,11 @@ import routerApplication from './routes/router';
  * Conectar MongoDB, inicializar sockets y abrir el puerto es responsabilidad de
  * `core/index.ts`. Esta separacion permite montar la app en tests sin base de datos.
  */
-export const createApp = (): Express => {
+export const createApp = ({ trustProxy = TRUST_PROXY }: AppOptions = {}): Express => {
   const app = express();
+
+  // Antes de cualquier middleware que mire `req.ip`.
+  app.set('trust proxy', trustProxy);
 
   // Configuracion
   app.use(helmet());
