@@ -115,8 +115,16 @@ jobs:
 
   e2e:
     name: Extremo a extremo
-    # Solo en main: levanta el stack completo y es el job mas caro.
-    if: github.ref == 'refs/heads/main'
+    # Corre en pull requests y en push a main.
+    #
+    # Antes declaraba `if: github.ref == 'refs/heads/main'` y solo se ejecutaba
+    # sobre el merge. Eso dejaba un hueco de proceso: ningun PR probaba la suite
+    # end-to-end contra el stack real antes de mergear, asi que un PR roto
+    # entraba a main y ahi se descubria. Si ademas el merge va directo a main,
+    # lo que se despliega ya es lo que fallo.
+    #
+    # Cuesta mas caro que el resto de los jobs, y esa es exactamente la razon
+    # por la que no se puede dejar para despues del merge.
     runs-on: ubuntu-latest
     # A nivel de job, no de step. Los tres pasos que invocan `docker compose`
     # (Levantar, Logs y Bajar) necesitan estas variables: compose aborta al
