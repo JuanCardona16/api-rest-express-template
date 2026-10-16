@@ -147,22 +147,51 @@ La regla de contraseña válida está definida en **un solo lugar**, `PasswordHe
 
 En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites no se corten con `429`.
 
-## 8. Sonda de salud
+## 8. Sondas de salud
 
-`GET /api/v1/health` responde el estado del proceso y de la conexión a la base de datos.
+Hay tres sondas, con tres significados distintos. Confundirlas es la forma más
+rápida de tener un orquestador que nunca saca de rotación una instancia rota.
+
+| Ruta                       | Significado                  | Código        |
+| -------------------------- | ---------------------------- | ------------- |
+| `GET /api/v1/health`       | El proceso responde          | `200` siempre |
+| `GET /api/v1/health/live`  | El proceso responde          | `200` siempre |
+| `GET /api/v1/health/ready` | El proceso puede **atender** | `200` o `503` |
+
+Las tres comparten la misma envoltura:
 
 ```json
 {
   "success": true,
-  "data": { "status": "ok", "uptime": 128, "database": "connected" },
+  "data": { "status": "ready", "uptime": 128, "database": "connected" },
   "status": 200,
   "timestamp": "..."
 }
 ```
 
-Está montada **antes** del limitador de velocidad, a propósito: si compartiera cuota con el tráfico real, el healthcheck del contenedor consumiría el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
+**Liveness** (`/health`, `/health/live`) responde `200` mientras el proceso atienda.
+Cuando la base no está conectada la respuesta sigue siendo `200` con
+`status: "degraded"`: un healthcheck que muere con la base provoca reinicios en
+cascada, y una degradación visible es preferible.
 
-Cuando la base no está conectada la respuesta sigue siendo `200` con `status: "degraded"`. Un healthcheck que muere con la base provoca reinicios en cascada; una degradación visible es preferible a eso.
+**Readiness** (`/health/ready`) responde `503` mientras Mongo no esté conectado, y
+solo `200` cuando `readyState` es `connected`. `connecting` **no** cuenta como
+sano: durante esa ventana el proceso todavía no puede atender y por eso no debe
+recibir tráfico.
+
+Esta es la ruta que el orquestador tiene que usar para decidir. Con una sola
+sonda que devuelve `200` siempre, una instancia sin base de datos sigue
+"healthy" y el balanceador le sigue mandando tráfico.
+
+Las tres van montadas **antes** del limitador de velocidad, a propósito: si
+compartieran cuota con el tráfico real, el healthcheck del contenedor consumiría
+el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
+
+`/health/ready` usa su propia envoltura y no `ApiSuccessResponse` ni
+`ApiErrorResponse`. El envelope de dominio tiene `success: true` como
+discriminante fijo, así que un `503` no entra: mandarlo con `success: true`
+miente, y mandarlo con el envelope de error descarta `uptime` y `database`
+justo cuando hacen falta. Una sonda la consume el orquestador, no un cliente.
 
 ## 9. Documentación de la API
 
