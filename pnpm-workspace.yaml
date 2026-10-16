@@ -6,3 +6,7 @@ allowBuilds:
   '@scarf/scarf': false
   # Descarga el binario de mongod que usan las pruebas de integracion.
   mongodb-memory-server: true
+  # Genera el codigo estatico que usan los exportadores OTLP de OpenTelemetry.
+  # Sin esto, la serializacion de trazas y metricas falla en runtime, y el
+  # sintoma es que la API arranca normal y no exporta nada.
+  protobufjs: true

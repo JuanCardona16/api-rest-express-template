@@ -91,9 +91,13 @@ jobs:
         # Compilar no alcanza: un bundle puede compilar y morir al ejecutarse.
         # Se levanta con una URL de base de datos invalida a proposito, para
         # comprobar que resuelve imports y llega a la conexion.
+        #
+        # Usa el comando real de arranque, con el `--import` del SDK de
+        # telemetria. Probar `node dist/index.js` probaria una ruta que nadie
+        # ejecuta: si el `--import` quedara mal, este gate seguiria en verde.
         run: |
           DATABASE_URL="mongodb://127.0.0.1:59999/nada" PORT=3999 \
-            node dist/index.js & sleep 5; \
+            node --import ./dist/telemetry.js dist/index.js & sleep 5; \
             curl -sf http://localhost:3999/api/v1/health && echo "OK"
 
   imagen:
@@ -115,8 +119,16 @@ jobs:
 
   e2e:
     name: Extremo a extremo
-    # Solo en main: levanta el stack completo y es el job mas caro.
-    if: github.ref == 'refs/heads/main'
+    # Corre en pull requests y en push a main.
+    #
+    # Antes declaraba `if: github.ref == 'refs/heads/main'` y solo se ejecutaba
+    # sobre el merge. Eso dejaba un hueco de proceso: ningun PR probaba la suite
+    # end-to-end contra el stack real antes de mergear, asi que un PR roto
+    # entraba a main y ahi se descubria. Si ademas el merge va directo a main,
+    # lo que se despliega ya es lo que fallo.
+    #
+    # Cuesta mas caro que el resto de los jobs, y esa es exactamente la razon
+    # por la que no se puede dejar para despues del merge.
     runs-on: ubuntu-latest
     # A nivel de job, no de step. Los tres pasos que invocan `docker compose`
     # (Levantar, Logs y Bajar) necesitan estas variables: compose aborta al

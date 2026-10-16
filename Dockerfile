@@ -62,7 +62,14 @@ EXPOSE 3000
 # El healthcheck no usa curl porque la imagen slim no lo trae: usa el propio Node.
 # Exige 200 exacto. Aceptar cualquier status valido dejaba pasar un 429, que
 # significa que la API se esta auto-limitando y ya no sirve a nadie.
+#
+# Consulta READINESS y no liveness: un contenedor que responde pero no puede
+# leer de Mongo no debe quedar sano, porque nginx le sigue mandando trafico.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health/ready').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", "dist/index.js"]
+# `--import` carga el SDK de OpenTelemetry antes que el grafo de la aplicacion.
+# Sin esa precedencia, los hooks de instrumentacion llegan tarde y el SDK queda
+# encendido sin instrumentar nada. Con OTEL_ENABLED=false el modulo no carga
+# ningun paquete del SDK y el costo es cero.
+CMD ["node", "--import", "./dist/telemetry.js", "dist/index.js"]

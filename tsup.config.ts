@@ -16,7 +16,16 @@ import { defineConfig } from 'tsup';
  *   build real.
  */
 export default defineConfig({
-  entry: ['src/core/index.ts'],
+  // Dos entrypoints, no uno. El segundo es el SDK de OpenTelemetry, que tiene que
+  // evaluarse ANTES que el grafo de la aplicacion para que los hooks de
+  // instrumentacion alcancen a `express`, `mongoose` e `ioredis`. El arranque
+  // lo carga con `node --import ./dist/telemetry.js dist/index.js`.
+  // La forma de objeto es la que permite nombrar la salida `telemetry.js`; con
+  // un array, tsup la derivaria del basename y saldria `register.js`.
+  entry: {
+    index: 'src/core/index.ts',
+    telemetry: 'src/infrastructure/telemetry/register.ts',
+  },
   outDir: 'dist',
   format: ['esm'],
   platform: 'node',
@@ -36,5 +45,10 @@ export default defineConfig({
       ...options.define,
       'process.env.NODE_ENV': '"production"',
     };
+
+    // Sin esto, la minificacion renombra los middlewares de express a `Ae`, `Xe`,
+    // `Qe`... y las trazas de OpenTelemetry salen con `middleware - Ae` en lugar
+    // del nombre real. Un trace que no se puede leer no sirve para diagnosing.
+    options.keepNames = true;
   },
 });

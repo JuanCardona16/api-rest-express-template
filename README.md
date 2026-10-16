@@ -39,12 +39,35 @@ pnpm dev                  # recarga en caliente
 ### Con Docker
 
 ```bash
-pnpm docker:up            # API + MongoDB + Redis
+pnpm docker:up            # nginx + API + MongoDB + Redis + collector de telemetría
 pnpm test:e2e             # pruebas contra el stack desplegado
 pnpm docker:down          # parar
 ```
 
-> **Para correr los E2E, subí `RATE_LIMIT_MAX` en tu `.env`** (por ejemplo `1000`). Con el límite por defecto la suite se corta a sí misma con `429` a mitad de camino, y el fallo parece un defecto de la API cuando es un límiteConfigured correctamente.
+> **Para correr los E2E, subí `RATE_LIMIT_MAX` en tu `.env`** (por ejemplo `1000`). Con el límite por defecto la suite se corta a sí misma con `429` a mitad de camino, y el fallo parece un defecto de la API cuando es un límite. Configured correctamente.
+
+### Escalar la API
+
+La API no publica puertos: el único servicio que lo hace es nginx. Eso es lo
+que permite correr varias réplicas:
+
+```bash
+docker compose up -d --scale api=3
+```
+
+Nginx resuelve `api` en el DNS interno de Docker **en cada petición**, así que
+reparte entre las tres. Comprobado: 60 peticiones contra 3 réplicas quedaron
+23 / 19 / 19.
+
+Para verlo en vivo, el log de nginx incluye la réplica que atendió cada
+petición:
+
+```bash
+docker compose logs -f nginx | grep -o 'upstream=[0-9.:]*' | sort | uniq -c
+```
+
+Si nginx quedara apuntando a una sola réplica, ese `uniq -c` muestra una sola
+línea y ninguna más.
 
 ## 3. Arquitectura
 
@@ -131,38 +154,95 @@ La regla de contraseña válida está definida en **un solo lugar**, `PasswordHe
 
 ## 7. Variables de entorno
 
-| Variable                   | Requerida | Descripción                                           |
-| -------------------------- | --------- | ----------------------------------------------------- |
-| `PORT`                     | No        | Puerto del servidor. Por defecto `3000`.              |
-| `NODE_ENV`                 | No        | `development`, `test` o `production`.                 |
-| `DATABASE_URL`             | **Sí**    | Cadena de conexión a MongoDB.                         |
-| `TOKEN_SECRET_KEY`         | **Sí**    | Secreto de los tokens de acceso.                      |
-| `REFESCH_TOKEN_SECRET_KEY` | **Sí**    | Secreto de los tokens de refresco.                    |
-| `RESEND_KEY`               | No        | Servicio de email.                                    |
-| `CLIENT_GOOGLE_ID`         | No        | OAuth de Google.                                      |
-| `CLIENT_GOOGLE_SECRET`     | No        | OAuth de Google.                                      |
-| `SOCKET_CORS_ORIGIN`       | No        | Orígenes permitidos en WebSocket, separados por coma. |
-| `RATE_LIMIT_MAX`           | No        | Máximo de solicitudes por ventana. Por defecto `10`.  |
-| `RATE_LIMIT_WINDOW_MS`     | No        | Ventana del límite. Por defecto 15 minutos.           |
+| Variable                     | Requerida | Descripción                                           |
+| ---------------------------- | --------- | ----------------------------------------------------- |
+| `PORT`                       | No        | Puerto del servidor. Por defecto `3000`.              |
+| `NODE_ENV`                   | No        | `development`, `test` o `production`.                 |
+| `DATABASE_URL`               | **Sí**    | Cadena de conexión a MongoDB.                         |
+| `TOKEN_SECRET_KEY`           | **Sí**    | Secreto de los tokens de acceso.                      |
+| `REFESCH_TOKEN_SECRET_KEY`   | **Sí**    | Secreto de los tokens de refresco.                    |
+| `RESEND_KEY`                 | No        | Servicio de email.                                    |
+| `CLIENT_GOOGLE_ID`           | No        | OAuth de Google.                                      |
+| `CLIENT_GOOGLE_SECRET`       | No        | OAuth de Google.                                      |
+| `SOCKET_CORS_ORIGIN`         | No        | Orígenes permitidos en WebSocket, separados por coma. |
+| `RATE_LIMIT_MAX`             | No        | Máximo de solicitudes **por IP** por ventana. `300`.  |
+| `RATE_LIMIT_WINDOW_MS`       | No        | Ventana del límite. Por defecto 15 minutos.           |
+| `TRUST_PROXY`                | No        | Saltos de proxy en los que confiar. `0` por defecto.  |
+| `REDIS_ENABLED`              | No        | Cache de verificación de contraseña. `true`.          |
+| `PASSWORD_CACHE_TTL_SECONDS` | No        | Vida del resultado cacheado. `30`.                    |
 
 En `NODE_ENV=test` el límite de solicitudes se desactiva, para que las suites no se corten con `429`.
 
-## 8. Sonda de salud
+### El límite es por IP, y eso tiene consecuencias
 
-`GET /api/v1/health` responde el estado del proceso y de la conexión a la base de datos.
+`RATE_LIMIT_MAX` cuenta **por IP**, no por usuario ni global. Medido con el
+valor anterior de `100` sobre 996 usuarios virtuales: 523 878 peticiones, de las
+cuales **497 788 salieron rechazadas con `429`**. Un cliente, o una oficina
+entera detrás de una NAT, queda con 100 peticiones cada 15 minutos.
+
+`TRUST_PROXY` es lo que hace que ese número signifique algo detrás de un proxy:
+
+- Con `TRUST_PROXY=1` y un solo nginx delante, Express lee la IP real del cliente.
+- Con `0` y la API detrás de nginx, `req.ip` es la IP de nginx y **toda la cuota
+  de la API es una sola cuota compartida por todos los usuarios**.
+- Confiar en toda la cadena es peor: cualquiera puede mandar `X-Forwarded-For` y
+  rotar su propia cuota.
+
+Con la API expuesta directamente a internet, el valor correcto es `0`. Cualquier
+valor que no sea un entero no negativo cae a `0` a propósito: un `NaN` en
+`trust proxy` hace que Express confíe en toda la cadena.
+
+`compose.yaml` pone `TRUST_PROXY=1` porque ahí hay exactamente un nginx delante.
+
+> **Nota**: `.env.example` no se pudo actualizar en este cambio porque el
+> entorno de trabajo bloquea la escritura sobre archivos `.env*`. Las variables
+> nuevas están documentadas acá y en `odd/tasks/prod-hardening.md`.
+
+## 8. Sondas de salud
+
+Hay tres sondas, con tres significados distintos. Confundirlas es la forma más
+rápida de tener un orquestador que nunca saca de rotación una instancia rota.
+
+| Ruta                       | Significado                  | Código        |
+| -------------------------- | ---------------------------- | ------------- |
+| `GET /api/v1/health`       | El proceso responde          | `200` siempre |
+| `GET /api/v1/health/live`  | El proceso responde          | `200` siempre |
+| `GET /api/v1/health/ready` | El proceso puede **atender** | `200` o `503` |
+
+Las tres comparten la misma envoltura:
 
 ```json
 {
   "success": true,
-  "data": { "status": "ok", "uptime": 128, "database": "connected" },
+  "data": { "status": "ready", "uptime": 128, "database": "connected" },
   "status": 200,
   "timestamp": "..."
 }
 ```
 
-Está montada **antes** del limitador de velocidad, a propósito: si compartiera cuota con el tráfico real, el healthcheck del contenedor consumiría el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
+**Liveness** (`/health`, `/health/live`) responde `200` mientras el proceso atienda.
+Cuando la base no está conectada la respuesta sigue siendo `200` con
+`status: "degraded"`: un healthcheck que muere con la base provoca reinicios en
+cascada, y una degradación visible es preferible.
 
-Cuando la base no está conectada la respuesta sigue siendo `200` con `status: "degraded"`. Un healthcheck que muere con la base provoca reinicios en cascada; una degradación visible es preferible a eso.
+**Readiness** (`/health/ready`) responde `503` mientras Mongo no esté conectado, y
+solo `200` cuando `readyState` es `connected`. `connecting` **no** cuenta como
+sano: durante esa ventana el proceso todavía no puede atender y por eso no debe
+recibir tráfico.
+
+Esta es la ruta que el orquestador tiene que usar para decidir. Con una sola
+sonda que devuelve `200` siempre, una instancia sin base de datos sigue
+"healthy" y el balanceador le sigue mandando tráfico.
+
+Las tres van montadas **antes** del limitador de velocidad, a propósito: si
+compartieran cuota con el tráfico real, el healthcheck del contenedor consumiría
+el cupo cada 10 segundos y la API empezaría a contestar `429` sola.
+
+`/health/ready` usa su propia envoltura y no `ApiSuccessResponse` ni
+`ApiErrorResponse`. El envelope de dominio tiene `success: true` como
+discriminante fijo, así que un `503` no entra: mandarlo con `success: true`
+miente, y mandarlo con el envelope de error descarta `uptime` y `database`
+justo cuando hacen falta. Una sonda la consume el orquestador, no un cliente.
 
 ## 9. Documentación de la API
 
@@ -179,11 +259,82 @@ Swagger se documenta con anotaciones JSDoc en los archivos de rutas.
 
 - **`node:20-slim`, no alpine.** bcrypt solo distribuye binarios precompilados para glibc; en alpine hay que instalar un toolchain de C++ y compilar en cada build.
 - **Usuario no root** en la imagen final.
-- **Healthcheck** que consulta una ruta que responde `404` a propósito: verifica que Express acepta peticiones, no que la aplicación sea correcta.
+- **Healthcheck de readiness**, no de liveness: verifica que el contenedor además de responder pueda leer de Mongo. Con una sonda de liveness, un contenedor sin base queda sano y sigue recibiendo tráfico.
 
 tsup deja las dependencias fuera del bundle, así que el artefacto necesita un `node_modules` de producción al lado. La imagen lo resuelve con una etapa dedicada de `pnpm install --prod`.
 
-## 11. Convenciones de código
+### Límites de recursos
+
+Sin topes, un contenedor runaway se come el nodo entero y el problema deja de ser
+el contenedor.
+
+| Servicio    | CPU | Memoria |
+| ----------- | --- | ------- |
+| `api`       | 2.0 | 768M    |
+| `mongo`     | 1.5 | 2G      |
+| `redis`     | 0.5 | 256M    |
+| `nginx`     | 1.0 | 128M    |
+| `telemetry` | 0.5 | 256M    |
+
+Son topes **por contenedor**: con `--scale api=3` el presupuesto de la API es
+el triple.
+
+`mongod` calcula su caché de WiredTiger a partir de la RAM de la **máquina**, no
+del límite del contenedor. Por eso el comando lleva
+`--wiredTigerCacheSizeGB 1`: sin eso, un contenedor con tope de 2 GiB intenta
+reservar gigas y muere por OOM en lugar de servir.
+
+### Nginx como proxy inverso
+
+`nginx/nginx.conf` se monta en `/etc/nginx/conf.d/`. La resolución de `api` es
+**en tiempo de petición** (`resolver 127.0.0.11`), no al arrancar: es lo que hace
+funcionar `--scale`. También propaga `X-Forwarded-For`, `X-Forwarded-Proto` y
+`Host`, y mantiene los WebSockets de Socket.IO abiertos con un timeout de una
+hora en `/socket.io/`.
+
+## 11. Telemetría
+
+OpenTelemetry con trazas y métricas exportadas por OTLP. Instrumentado: `http`,
+`express`, `mongoose`, `mongodb`, `ioredis` y las métricas del runtime. `fs`,
+`dns` y `net` están apagadas a propósito: generan un span por archivo y por
+lookup y revientan el costo sin decir nada del comportamiento de la API.
+
+```bash
+docker compose logs -f telemetry   # spans y métricas en el log del collector
+```
+
+El collector del stack escribe con el exportador `debug`. Alcanza para **probar
+que la instrumentación funciona**; para ver trazas en una interfaz hay que
+cambiar el exportador del pipeline `traces` en `otel-collector-config.yaml` por
+el backend real (Jaeger, Tempo, Grafana Cloud, Datadog). Eso es configuración,
+no código.
+
+### El SDK es un entrypoint aparte, y no es capricho
+
+```bash
+node --import ./dist/telemetry.js dist/index.js
+```
+
+tsup empaqueta la aplicación en **un solo archivo** ESM, y los imports de
+paquetes externos quedan al principio del bundle: esos módulos se resuelven antes
+de que corra el cuerpo de cualquier módulo. Un `import './telemetry'` dentro de
+`index.ts` se ejecutaría cuando `express` ya está cargado, y los hooks de
+`require-in-the-middle` que usa la instrumentación automática solo se instalan
+sobre módulos que se cargan después.
+
+El resultado de hacerlo mal no es un error: es un SDK encendido que no
+instrumenta nada. Falso, silencioso, y peor que no tenerlo.
+
+`OTEL_ENABLED` está apagado salvo que valga exactamente `true`. Apagado, los
+`import()` dinámicos de `register.ts` no se ejecutan y no se carga ni un paquete
+del SDK: el costo es cero, no "cargar el SDK y no usarlo". Y cuando está encendido
+y el collector no responde, los exportadores reintentan y pierden datos, pero la
+API sigue sirviendo: la telemetría nunca es una dependencia del arranque.
+
+En desarrollo (`pnpm dev`) la telemetría **no** está montada: `tsx watch` no
+carga el entrypoint con `--import`.
+
+## 12. Convenciones de código
 
 ESLint 9 con configuración plana (`eslint.config.js`) y Prettier como regla de ESLint, de modo que `.prettierrc` es la única fuente de formato.
 
@@ -201,10 +352,21 @@ Documentada a propósito, no resuelta:
 
 - **Rutas comentadas.** Los endpoints de cambio de contraseña y login de Google están implementados pero comentados en `features/authentication/routes/auth.route.ts`. Sus servicios acceden a Mongoose saltándose el repositorio.
 - **Email duplicado responde `500`.** El índice único de Mongo lanza dentro del repositorio, que mapea todo error a 500. Debería ser `409`.
-- **Login enumera usuarios.** Un email inexistente da `404` y uno existente con contraseña incorrecta da `403`, lo que confirma si una cuenta está registrada.
-- **La conexión a Mongo no se espera.** `core/index.ts` empieza a escuchar antes de confirmar la base de datos.
-- **CORS loguea en producción.** `corsConfig.ts` tiene `console.log` en cada request y `console.error` por origen rechazado, con un comentario que dice "solo para desarrollo" pero sin la condición que lo haga cierto. La lista de orígenes además es fija en el código y no incluye el puerto por defecto.
-- **`ioredis` y `cookie-parser`** siguen declarados y sin usar.
+- **La conexión a Mongo no se espera.** `core/index.ts` empieza a escuchar antes de confirmar la base de datos. Hay una ventana en la que el puerto acepta tráfico que no se puede atender.
+- **CORS loguea en producción.** `corsConfig.ts` tiene `console.log` en cada request y `console.error` por origen rechazado, con un comentario que dice "solo para desarrollo" pero sin la condición que lo haga cierto. La lista de orígenes además es fija en el código.
+- **Socket.IO loguea con `console.log`.** Una línea por conexión, por mensaje y por desconexión, con `userId` en claro y sin nivel ni estructura. Es el último `console.log` de la ruta de producción que queda.
+- **`cookie-parser`** sigue declarado y sin usar.
+- **El límite de velocidad no se comparte entre réplicas.** Usa el `MemoryStore` de `express-rate-limit`: con `--scale api=3` la cuota real es el triple de la configurada, y cada reinicio la limpia. Para cerrarlo hace falta un store en Redis, que ya está en el stack pero no se usa para esto.
+- **No hay `trust proxy` fuera de Docker.** `TRUST_PROXY` viene en `0` por defecto y `compose.yaml` lo pone en `1`. Un despliegue con balanceador propio tiene que fijarlo a mano.
+- **La telemetría no corre en desarrollo.** `pnpm dev` no carga el entrypoint con `--import`.
+- **La instrumentación de Socket.IO está apagada.** Se enciende con `OTEL_SOCKETIO=true`; no se verificó que no rompa conexiones.
+- **`.env.example` quedó desactualizado.** No incluye `TRUST_PROXY`, `OTEL_*` ni los nuevos valores por defecto. El entorno de trabajo bloqueó la escritura sobre archivos `.env*` durante este cambio.
+
+Resuelto y ya fuera de esta lista:
+
+- **Login enumera usuarios.** `auth.service.ts` tira un único `401 INVALID_CREDENTIALS` tanto para email inexistente como para contraseña incorrecta, y hay un test que además verifica que los dos casos no se distinguen por tiempo.
+- **`ioredis` sin usar.** Ahora es el store del cache de verificación de contraseña.
+- **La sonda de salud siempre en `200`.** Separada en `/health/live` y `/health/ready`.
 
 ## 13. Licencia
 
