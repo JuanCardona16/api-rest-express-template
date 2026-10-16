@@ -1,0 +1,59 @@
+# Stack de desarrollo: API + MongoDB + Redis.
+#
+# Los servicios usan healthcheck y depends_on con condition: service_healthy.
+# Sin eso la API arranca antes que la base de datos, y MongoHelpers hace
+# process.exit(1) al fallar la conexion: el contenedor muere en un loop.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: authentication-system
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Nombre del servicio, no localhost: dentro de la red de compose el host de
+      # Mongo es el nombre del servicio.
+      DATABASE_URL: mongodb://mongo:27017/authentication-system
+      SOCKET_CORS_ORIGIN: '${SOCKET_CORS_ORIGIN:-http://localhost:3000}'
+      TOKEN_SECRET_KEY: '${TOKEN_SECRET_KEY:?define TOKEN_SECRET_KEY en .env}'
+      REFESCH_TOKEN_SECRET_KEY: '${REFESCH_TOKEN_SECRET_KEY:?define REFESCH_TOKEN_SECRET_KEY en .env}'
+      RESEND_KEY: '${RESEND_KEY:-}'
+      CLIENT_GOOGLE_ID: '${CLIENT_GOOGLE_ID:-}'
+      CLIENT_GOOGLE_SECRET: '${CLIENT_GOOGLE_SECRET:-}'
+      RATE_LIMIT_MAX: '${RATE_LIMIT_MAX:-100}'
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

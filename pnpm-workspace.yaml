@@ -4,3 +4,5 @@ allowBuilds:
   bcrypt: true
   esbuild: true
   '@scarf/scarf': false
+  # Descarga el binario de mongod que usan las pruebas de integracion.
+  mongodb-memory-server: true

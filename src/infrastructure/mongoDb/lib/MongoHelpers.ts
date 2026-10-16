@@ -1,5 +1,5 @@
 import mongoose, { model, Model, Schema } from 'mongoose';
-import { CollectionsNamesMongo } from '../Collections/Collections';
+import { CollectionsNamesMongo } from '@/infrastructure/mongoDb/Collections/Collections';
 
 class MongoHelpers {
   constructor() {

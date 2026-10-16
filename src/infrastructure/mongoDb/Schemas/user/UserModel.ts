@@ -2,7 +2,7 @@ import MongoHelpers from '@/infrastructure/mongoDb/lib/MongoHelpers';
 import { CollectionsNamesMongo } from '../../Collections/Collections';
 import UserMongoSchema from './User.schema';
 import mongoose from 'mongoose';
-import { User } from '@/features/user/model/User.model';
+import { User } from '@/features/user/interfaces/user.types';
 
 const UserModel = MongoHelpers.getDataCollectionModel<User>(
   CollectionsNamesMongo.USERS,
