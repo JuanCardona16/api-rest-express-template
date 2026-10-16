@@ -82,8 +82,8 @@ queda en 100 peticiones cada 15 minutos.
 | T1  | S1     | inline | `0f9d963` | hecho  |
 | T2  | S2     | inline | `33b77ed` | hecho  |
 | T3  | S3, S6 | inline | `270b103` | hecho  |
-| T4  | S4     | inline | —         | hecho  |
-| T5  | S5     | inline | —         | hecho  |
+| T4  | S4     | inline | `ce07f01` | hecho  |
+| T5  | S5     | inline | `3220b43` | hecho  |
 
 Ruta: inline para todas. No hay trigger de writer: T3 y T6 tocan `src/core/app.ts` y
 `compose.yaml`, y T4 y T5 tocan `compose.yaml`. Son superficies compartidas, no
@@ -176,3 +176,60 @@ El entorno de trabajo rechaza escrituras sobre archivos `.env*`, tanto con `edit
 como con `write`. No se intentó esquivar por shell: la variable nueva
 `TRUST_PROXY` y los defaults nuevos quedaron documentados en el README y acá, y
 la deuda quedó anotada en la sección "Deuda conocida" del README.
+
+### L8 — 2026-10-16, verificación final
+
+| Comando                 | Resultado                                               |
+| ----------------------- | ------------------------------------------------------- |
+| `pnpm lint`             | 0 errores, 8 warnings (preexistentes)                   |
+| `pnpm typecheck`        | limpio                                                  |
+| `pnpm format:check`     | limpio                                                  |
+| `pnpm build`            | `dist/index.js` 22.16 KB, `dist/telemetry.js` 2.04 KB   |
+| `pnpm test:unit`        | 94 passed (89 previos + 5 nuevos)                       |
+| `pnpm test:integration` | 26 passed (18 previos + 8 nuevos)                       |
+| `pnpm test:functional`  | 24 passed, sin cambios                                  |
+| `pnpm docker:test`      | 23 passed (18 previos + 5 nuevos), contra el stack real |
+
+El E2E corrió **sin** subir `RATE_LIMIT_MAX` a mano. Con el default nuevo de 300
+la suite entra; con el 100 anterior se cortaba a mitad de camino. Eso confirma que
+el default nuevo corrige el problema sin tener que acordarse de una variable.
+
+Evidencia medida contra el stack real, no inferida:
+
+- Balanceo: 60 peticiones a 3 réplicas → **23 / 19 / 19**.
+- `TRUST_PROXY=1`: host en `429` con la cuota agotada, dos contenedores con otra
+  IP de origen en `200`. `TRUST_PROXY=0`: el cliente B cae en `429` con otra IP.
+- Telemetría: 46 spans y 17 métricas en el collector, con spans de express
+  (`setHeaders`, `helmetMiddleware`, `corsMiddleware`, `jsonParser`,
+  `urlencodedParser`, `query`, `expressInit`), de MongoDB (`insert users`,
+  `find users`) y de HTTP con `client.address=172.18.0.1`, o sea la IP real del
+  cliente a través de nginx.
+- Límites efectivos: `api` 2 CPU / 768M usando 60 MiB; `mongo` 1.5 CPU / 2G
+  usando 113 MiB con la caché acotada a 1 GiB.
+
+### L9 — 2026-10-16, `keepNames` y un falso negativo de verificación
+
+Las trazas del build minificado mostraban `middleware - Ae` en lugar del nombre
+real. La causa es la minificación: esbuild renombra las funciones.
+
+`options.keepNames = true` en el `esbuildOptions` de tsup lo arregla. Pero la
+primera verificación dio 0 coincidencias buscando el helper `__name`, y estuvo a
+punto de conclure que la opción no funcionaba: esbuild lo RENOMBRA. La forma
+correcta de comprobarlo es buscar los nombres originales conservados
+(`"setHeaders"`, `"CorsConfig"`, `"authenticatedSocket"`).
+
+Verificado contra el collector después de reconstruir: los 7 middlewares salen
+con nombre. Quedan fuera las flechas anónimas devueltas por factories, como el
+resultado de `CorsConfig()`, que no tienen nombre que preservar.
+
+### L10 — 2026-10-16, pendientes que son decisiones del usuario
+
+1. **"Extremo a extremo" no es un check requerido.** Corre en el PR (S2), pero
+   mientras no se agregue a la protección de `main`, un PR puede mergearse
+   igual con el E2E en rojo. Cerrar el hueco de S2 de verdad es una decisión de
+   política del repositorio.
+2. **Modelo de cuota.** El límite sigue siendo global por IP. Un límite más
+   estricto en `/auth/login` sería lo natural contra credential stuffing, pero
+   cambia el comportamiento observable de una ruta y no se hizo sin consultar.
+3. **`TRUST_PROXY` en despliegues reales.** `compose.yaml` lo pone en `1`. Otro
+   despliegue con su propio balanceador tiene que fijarlo a mano.
