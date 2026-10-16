@@ -118,6 +118,17 @@ jobs:
     # Solo en main: levanta el stack completo y es el job mas caro.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # A nivel de job, no de step. Los tres pasos que invocan `docker compose`
+    # (Levantar, Logs y Bajar) necesitan estas variables: compose aborta al
+    # interpolar si faltan, porque el compose las declara con `:?`. Con el
+    # bloque a nivel de step, `down -v` fallaba con "required variable
+    # TOKEN_SECRET_KEY is missing a value" y el job moria en la limpieza con
+    # la suite E2E entera en verde.
+    env:
+      TOKEN_SECRET_KEY: ci-token-secret
+      REFESCH_TOKEN_SECRET_KEY: ci-refresh-secret
+      # Con el limite por defecto la suite se corta con 429 a mitad de camino.
+      RATE_LIMIT_MAX: '1000'
     steps:
       - uses: actions/checkout@v4
 
@@ -134,11 +145,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Levantar el stack
-        env:
-          TOKEN_SECRET_KEY: ci-token-secret
-          REFESCH_TOKEN_SECRET_KEY: ci-refresh-secret
-          # Con el limite por defecto la suite se corta con 429 a mitad de camino.
-          RATE_LIMIT_MAX: '1000'
         run: docker compose up -d --build --wait
 
       - name: Esperar la API
