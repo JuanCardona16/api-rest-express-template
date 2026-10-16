@@ -30,23 +30,55 @@ describe('PasswordHelpers', () => {
     });
   });
 
+  describe('hasheo no bloqueante', () => {
+    // Estas dos pruebas congelan una decision de diseno, no un detalle de
+    // implementacion: `hashSync` y `compareSync` congelan el event loop entero
+    // de Node durante cada operacion. Con trafico concurrente, un solo login
+    // detenia la API completa. bcrypt tiene variantes asincronas que corren en
+    // el threadpool y liberan el hilo principal.
+    it('generateHashing devuelve una promesa, no un string ya resuelto', () => {
+      expect(PasswordHelpers.generateHashing('Password1!', 12)).toBeInstanceOf(Promise);
+    });
+
+    it('compare devuelve una promesa, no un booleano ya resuelto', async () => {
+      const hash = await PasswordHelpers.generateHashing('Password1!', 12);
+
+      expect(PasswordHelpers.compare('Password1!', hash)).toBeInstanceOf(Promise);
+    });
+
+    it('el event loop responde mientras hashea', async () => {
+      let respondsDuringHash = false;
+      const probing = setTimeout(() => {
+        respondsDuringHash = true;
+      }, 0);
+
+      await PasswordHelpers.generateHashing('Password1!', 12);
+      const result = respondsDuringHash;
+      clearTimeout(probing);
+
+      // Con `hashSync` el temporizador no puede correr hasta que el hash
+      // termina: el hilo principal estaba ocupado todo ese tiempo.
+      expect(result).toBe(true);
+    });
+  });
+
   describe('generateHashing y compare', () => {
-    it('produce un hash que verifica contra la contrasena original', () => {
-      const hash = PasswordHelpers.generateHashing('Password1!', 12);
+    it('produce un hash que verifica contra la contrasena original', async () => {
+      const hash = await PasswordHelpers.generateHashing('Password1!', 12);
 
       expect(hash).not.toBe('Password1!');
-      expect(PasswordHelpers.compare('Password1!', hash)).toBe(true);
+      expect(await PasswordHelpers.compare('Password1!', hash)).toBe(true);
     });
 
-    it('falla la comparacion con una contrasena distinta', () => {
-      const hash = PasswordHelpers.generateHashing('Password1!', 12);
+    it('falla la comparacion con una contrasena distinta', async () => {
+      const hash = await PasswordHelpers.generateHashing('Password1!', 12);
 
-      expect(PasswordHelpers.compare('OtraClave1!', hash)).toBe(false);
+      expect(await PasswordHelpers.compare('OtraClave1!', hash)).toBe(false);
     });
 
-    it('genera un hash distinto en cada llamada', () => {
-      const primero = PasswordHelpers.generateHashing('Password1!', 12);
-      const segundo = PasswordHelpers.generateHashing('Password1!', 12);
+    it('genera un hash distinto en cada llamada', async () => {
+      const primero = await PasswordHelpers.generateHashing('Password1!', 12);
+      const segundo = await PasswordHelpers.generateHashing('Password1!', 12);
 
       expect(primero).not.toBe(segundo);
     });

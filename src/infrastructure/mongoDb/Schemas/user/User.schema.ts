@@ -66,8 +66,12 @@ UserMongoSchema.pre('save', async function (next) {
       return next(CustomError(400, PASSWORD_RULE_MESSAGE));
     }
   }
-  this.password = PasswordHelpers.generateHashing(this.password, 12);
-  next();
+  try {
+    this.password = await PasswordHelpers.generateHashing(this.password, 12);
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
 });
 
 export default UserMongoSchema;

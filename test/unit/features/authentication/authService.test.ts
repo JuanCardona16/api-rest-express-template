@@ -9,6 +9,8 @@ import {
   RepositorioDeUsuariosMock,
   usuarioDePrueba,
 } from '../../../shared/userRepositoryMock';
+import { CacheDeContrasenasMock } from '../../../shared/passwordCacheMock';
+import { PasswordVerificationCache } from '@/features/authentication/services/passwordVerificationCache';
 
 /**
  * Reglas de negocio de la autenticacion, probadas contra el puerto y no contra
@@ -16,11 +18,18 @@ import {
  */
 describe('AuthenticationServices', () => {
   let repositorio: RepositorioDeUsuariosMock;
+  let cache: CacheDeContrasenasMock;
   let servicio: AuthenticationServices;
 
   beforeEach(() => {
     repositorio = crearRepositorioDeUsuariosMock();
-    servicio = new AuthenticationServices(comoRepositorio(repositorio));
+    cache = new CacheDeContrasenasMock();
+    // El puerto va doblado, pero la logica del cache es la real: asi el test
+    // cubre el camino completo, no un cache que siempre dice "verificado".
+    servicio = new AuthenticationServices(
+      comoRepositorio(repositorio),
+      new PasswordVerificationCache(cache, 'secreto-de-prueba', 30),
+    );
   });
 
   describe('register', () => {
@@ -63,10 +72,10 @@ describe('AuthenticationServices', () => {
   describe('login', () => {
     const contrasenaValida = 'Password1!';
 
-    beforeEach(() => {
+    beforeEach(async () => {
       repositorio.getPasswordByEmail.mockResolvedValue({
         uuid: usuarioDePrueba().uuid,
-        password: PasswordHelpers.generateHashing(contrasenaValida, 12),
+        password: await PasswordHelpers.generateHashing(contrasenaValida, 12),
       });
     });
 
@@ -141,6 +150,99 @@ describe('AuthenticationServices', () => {
       await expect(
         servicio.login({ email: 'juan@example.com', password: '' }),
       ).rejects.toMatchObject({ status: 401 });
+    });
+  });
+
+  describe('login con cache de verificacion', () => {
+    const contrasenaValida = 'Password1!';
+    const credenciales = { email: 'juan@example.com', password: contrasenaValida };
+
+    beforeEach(async () => {
+      repositorio.getPasswordByEmail.mockResolvedValue({
+        uuid: usuarioDePrueba().uuid,
+        password: await PasswordHelpers.generateHashing(contrasenaValida, 12),
+      });
+    });
+
+    it('cachea la verificacion despues de un login correcto', async () => {
+      await servicio.login(credenciales);
+
+      expect(cache.tamano).toBe(1);
+    });
+
+    it('el segundo login correcto resuelve sin volver a hashear', async () => {
+      await servicio.login(credenciales);
+      const escriturasTrasElPrimero = cache.escrituras;
+
+      const segunda = await servicio.login(credenciales);
+
+      expect(segunda.success).toBe(true);
+      // Un acierto en el cache no debe volver a escribir: si escribiera, la
+      // ventana TTL se renovaria en cada login y la revocacion no ocurriria.
+      expect(cache.escrituras).toBe(escriturasTrasElPrimero);
+    });
+
+    it('nunca cachea una contrasena incorrecta', async () => {
+      await expect(
+        servicio.login({ email: 'juan@example.com', password: 'OtraClave1!' }),
+      ).rejects.toMatchObject({ status: 401 });
+
+      expect(cache.tamano).toBe(0);
+    });
+
+    it('vuelve a hashear cuando la contrasena cambio en la base', async () => {
+      await servicio.login(credenciales);
+
+      // La contrasena cambio: el hash vigente es distinto al que se cacheo, asi
+      // que el cache tiene que descartarse solo y la nueva tiene que validarse.
+      const hashNuevo = await PasswordHelpers.generateHashing('NuevaClave1!', 12);
+      repositorio.getPasswordByEmail.mockResolvedValue({
+        uuid: usuarioDePrueba().uuid,
+        password: hashNuevo,
+      });
+
+      await expect(
+        servicio.login({ email: 'juan@example.com', password: contrasenaValida }),
+      ).rejects.toMatchObject({ status: 401 });
+
+      await expect(
+        servicio.login({ email: 'juan@example.com', password: 'NuevaClave1!' }),
+      ).resolves.toMatchObject({ success: true });
+    });
+
+    // Requisito: el cache no puede ser una dependencia dura.
+    it('el login sigue funcionando si redis esta caido', async () => {
+      cache.caido = true;
+
+      await expect(servicio.login(credenciales)).resolves.toMatchObject({ success: true });
+    });
+
+    it('el login sigue rechazando si redis esta caido', async () => {
+      cache.caido = true;
+
+      await expect(
+        servicio.login({ email: 'juan@example.com', password: 'OtraClave1!' }),
+      ).rejects.toMatchObject({ status: 401, message: 'Invalid credentials' });
+    });
+
+    // Si el cache respondiera "verificado" sin comprobar el valor, cualquiera
+    // entraria con una contrasena incorrecta.
+    it('no confía a ciegas un acierto del cache cuyo hash no es el de la base', async () => {
+      cache.siguienteRespuesta = '$2b$12$hashInventado';
+
+      await expect(
+        servicio.login({ email: 'juan@example.com', password: 'OtraClave1!' }),
+      ).rejects.toMatchObject({ status: 401, message: 'Invalid credentials' });
+    });
+
+    it('no consulta el cache cuando el usuario no existe', async () => {
+      repositorio.getPasswordByEmail.mockResolvedValue(null);
+
+      await expect(
+        servicio.login({ email: 'nadie@example.com', password: contrasenaValida }),
+      ).rejects.toMatchObject({ status: 401 });
+
+      expect(cache.lecturas).toBe(0);
     });
   });
 });
